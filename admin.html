@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plummer Family History</title>
+  <meta name="description" content="Plummer family history hub – tree, stories, photos, and a simple data editor." />
+  <style>
+    :root{
+      --bg:#0b0c0f;
+      --panel:#11131a;
+      --ink:#e9eef7;
+      --muted:#9aa5b1;
+      --accent:#2dd4bf;
+      --accent-2:#a78bfa;
+      --accent-3:#f59e0b;
+      --danger:#ef4444;
+      --ok:#22c55e;
+      --card:#0f1219;
+      --chip:#1a1f2c;
+      --br:18px;
+      --shadow:0 8px 30px rgba(0,0,0,.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    html,body{height:100%;}
+    body{margin:0;background:linear-gradient(180deg,#0b0c0f 0%,#0c1018 100%);color:var(--ink);font-family:var(--sans);}
+    header{display:flex;align-items:center;gap:16px;padding:18px 22px;border-bottom:1px solid #1c2230;background:#0b0f17;position:sticky;top:0;z-index:20}
+    .brand{display:flex;align-items:center;gap:14px}
+    .brand h1{font-size:20px;letter-spacing:.3px;margin:0}
+    .crest{width:48px;height:48px}
+
+    nav{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+    .tab{background:transparent;border:1px solid #2a3245;color:var(--ink);padding:8px 12px;border-radius:999px;cursor:pointer}
+    .tab.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(45,212,191,.15)}
+
+    main{padding:22px;max-width:1100px;margin:0 auto}
+    .grid{display:grid;gap:18px}
+    @media(min-width:900px){.grid{grid-template-columns: 1.2fr .8fr}}
+
+    .card{background:var(--card);border:1px solid #1a2232;border-radius:var(--br);box-shadow:var(--shadow)}
+    .card h2{margin:0 0 10px 0;font-size:18px}
+    .card .hd{padding:16px 18px;border-bottom:1px solid #1b2230;display:flex;align-items:center;justify-content:space-between}
+    .card .bd{padding:16px 18px}
+
+    .chips{display:flex;gap:10px;flex-wrap:wrap}
+    .chip{background:var(--chip);border:1px solid #20293d;padding:6px 10px;border-radius:999px;font-size:12px;color:var(--muted)}
+
+    .muted{color:var(--muted)}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row> *{flex:1}
+
+    input,select,textarea{width:100%;background:#0d121c;border:1px solid #1c2638;color:var(--ink);padding:10px 12px;border-radius:12px;outline:none}
+    textarea{min-height:110px}
+    label{display:block;font-size:12px;color:var(--muted);margin:8px 2px}
+    .btn{appearance:none;border:0;background:var(--accent);color:#061015;font-weight:600;padding:10px 14px;border-radius:12px;cursor:pointer}
+    .btn.secondary{background:#1a2234;color:var(--ink);border:1px solid #2b3550}
+    .btn.warn{background:var(--danger);color:white}
+    .btn.ghost{background:transparent;border:1px dashed #2b3550;color:var(--muted)}
+
+    .stack{display:flex;flex-direction:column;gap:12px}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .person{padding:10px 12px;background:#0f1522;border:1px solid #1e2740;border-radius:12px}
+
+    .tree{padding:10px 12px}
+    .tree ul{list-style:none;padding-left:20px}
+    .tree li{margin:6px 0;position:relative}
+    .tree li::before{content:"";position:absolute;left:-12px;top:0;bottom:0;width:1px;background:#26324b}
+    .tree li::after{content:"";position:absolute;left:-12px;top:12px;width:12px;height:1px;background:#26324b}
+
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#132036;border:1px solid #22304a;color:#bcd}
+
+    .footer{opacity:.7;text-align:center;padding:20px}
+
+    /* Admin/Public layout */
+    .public aside{display:none}
+    .public main .grid{grid-template-columns:1fr}
+    .public .admin-only{display:none!important}
+    .public [data-act]{display:none!important}
+
+    /* Route (left-side) section visibility */
+    .route{display:none}
+    .route.active{display:block}
+
+    pre.code{background:#0b0f17;border:1px solid #1b2233;border-radius:12px;padding:12px;overflow:auto;font-family:var(--mono);font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <!-- Minimal SVG crest nodding to Accompong/Jamaica roots and migration to US & UK -->
+    <svg class="crest" viewBox="0 0 100 120" aria-label="Plummer family crest" role="img">
+      <defs>
+        <linearGradient id="glow" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#2dd4bf" stop-opacity=".9"/>
+          <stop offset="100%" stop-color="#a78bfa" stop-opacity=".6"/>
+        </linearGradient>
+      </defs>
+      <!-- shield -->
+      <path d="M10 10 h80 v45 c0 30 -20 45 -40 55 c-20 -10 -40 -25 -40 -55 z" fill="#101828" stroke="url(#glow)" stroke-width="3"/>
+      <!-- Jamaica X motif -->
+      <path d="M10 10 L90 55 L90 10 Z" fill="#f59e0b" opacity=".35"/>
+      <path d="M90 10 L10 55 L10 10 Z" fill="#22c55e" opacity=".35"/>
+      <path d="M10 100 L90 55 L90 100 Z" fill="#16a34a" opacity=".25"/>
+      <path d="M90 100 L10 55 L10 100 Z" fill="#fbbf24" opacity=".25"/>
+      <!-- US/UK nod: stripes & star -->
+      <rect x="18" y="25" width="64" height="10" fill="#ef4444" opacity=".45"/>
+      <rect x="18" y="38" width="64" height="10" fill="#60a5fa" opacity=".45"/>
+      <circle cx="50" cy="28" r="3.5" fill="#e5e7eb"/>
+      <!-- P monogram -->
+      <text x="50" y="82" text-anchor="middle" fill="#c7d2fe" font-weight="700" font-size="28" font-family="Georgia,serif">P</text>
+    </svg>
+    <div class="brand">
+      <h1>Plummer Family History</h1>
+      <div class="chips">
+        <span class="chip">Accompong → US & UK</span>
+        <span class="chip">Stories • Tree • Photos</span>
+      </div>
+    </div>
+    <nav id="tabs"></nav>
+  </header>
+
+  <main>
+    <div class="grid">
+      <!-- LEFT: content panels -->
+      <div class="stack">
+        <section id="home" class="card route active">
+          <div class="hd"><h2>Welcome</h2></div>
+          <div class="bd stack">
+            <p class="muted">This is your one‑page, multi‑section starter you can drop on GitHub Pages or Netlify. Everything (layout, styles, data, and logic) lives in this single file to keep it simple. You can later split it into separate pages/files.</p>
+            <div class="row">
+              <div class="card" style="border-radius:12px;flex:1">
+                <div class="bd">
+                  <h3 style="margin-top:0">Quick Start</h3>
+                  <ol>
+                    <li>Click <b>People</b> → <b>Add Person</b> to enter relatives.</li>
+                    <li>Set a <b>Root Person</b> and open <b>Family Tree</b> to see the tree.</li>
+                    <li>Use <b>Export Data</b> to download a JSON backup.</li>
+                    <li>Next time, <b>Import Data</b> or let it auto‑load from your browser’s storage.</li>
+                  </ol>
+                </div>
+              </div>
+              <div class="card" style="border-radius:12px;flex:1">
+                <div class="bd">
+                  <h3 style="margin-top:0">Sections</h3>
+                  <ul>
+                    <li><b>Family Tree:</b> Visual tree from your chosen root.</li>
+                    <li><b>People:</b> Add/edit relatives; simple JSON under the hood.</li>
+                    <li><b>Stories:</b> Attach memories to people and export as JSON.</li>
+                    <li><b>Photos:</b> Drag images in (local‑only) and caption them, or reference files from your repo.</li>
+                    <li><b>Timeline:</b> Life events laid out by year.</li>
+                    <li><b>Help:</b> How to publish and customize.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <details>
+              <summary><b>About the crest</b></summary>
+              <p class="muted">Inline SVG nods to Jamaica’s colors and the US/UK journey. You can replace it later with an image file or a more detailed SVG. The monogram “P” is for Plummer.</p>
+            </details>
+          </div>
+        </section>
+
+        <section id="tree" class="card route">
+          <div class="hd">
+            <h2>Family Tree</h2>
+            <div class="row" style="gap:8px;align-items:center;max-width:520px">
+              <select id="rootSelect"></select>
+              <button class="btn secondary" id="centerOnRoot">Center on Root</button>
+              <button class="btn" id="expandAll">Expand All</button>
+              <button class="btn secondary" id="collapseAll">Collapse All</button>
+            </div>
+          </div>
+          <div class="bd">
+            <div id="treeView" class="tree"></div>
+          </div>
+        </section>
+
+        <section id="people" class="card route">
+          <div class="hd">
+            <h2>People</h2>
+            <div class="row" style="gap:8px;align-items:center;max-width:520px">
+              <input id="search" placeholder="Search names…" />
+              <button class="btn admin-only" id="addPersonBtn">Add Person</button>
+            </div>
+          </div>
+          <div class="bd stack">
+            <div id="peopleList" class="list"></div>
+          </div>
+        </section>
+
+        <section id="stories" class="card route">
+          <div class="hd">
+            <h2>Stories & Memories</h2>
+            <div class="row" style="gap:8px;align-items:center;max-width:540px">
+              <select id="storyPerson"></select>
+              <button class="btn admin-only" id="addStoryBtn">Add Story</button>
+            </div>
+          </div>
+          <div class="bd stack">
+            <div id="storyList" class="list"></div>
+          </div>
+        </section>
+
+        <section id="photos" class="card route">
+          <div class="hd">
+            <h2>Photos</h2>
+            <div class="row" style="gap:8px;align-items:center">
+              <button class="btn admin-only" id="addRepoPhoto">Add Repo Photo</button>
+              <button class="btn secondary admin-only" id="clearPhotos">Clear</button>
+            </div>
+          </div>
+          <div class="bd stack">
+            <div id="dropzone" class="card admin-only" style="padding:20px;border-style:dashed;text-align:center">Drop images here or click to select<input id="photoInput" type="file" accept="image/*" multiple style="display:none"/></div>
+            <div id="photoGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px"></div>
+            <p id="photosModeNote" class="muted">Images stay in your browser (localStorage). To put them online, upload files to a <code>/photos</code> folder in your repo, then add them here as “repo photos.”</p>
+          </div>
+        </section>
+
+        <section id="timeline" class="card route">
+          <div class="hd"><h2>Timeline</h2></div>
+          <div class="bd">
+            <div id="timelineView" class="list"></div>
+          </div>
+        </section>
+
+        <section id="help" class="card route">
+          <div class="hd"><h2>Help & Publish</h2></div>
+          <div class="bd stack">
+            <details open>
+              <summary><b>Public (view‑only) vs Admin (editing)</b></summary>
+              <p>By default, publish <code>index.html</code> as your public, view‑only site. To enable editing, use a second copy named <code>admin.html</code>. The page auto‑detects the file name or a query flag:</p>
+              <ul>
+                <li><b>index.html</b> → public (no edit buttons, no data tools, no photo uploads)</li>
+                <li><b>admin.html</b> → full editor enabled</li>
+                <li>Or add <code>?admin=1</code> to the URL temporarily</li>
+              </ul>
+            </details>
+            <details open>
+              <summary><b>How do I publish this?</b></summary>
+              <ol>
+                <li>Save this file as <code>index.html</code>.</li>
+                <li><b>GitHub Pages:</b> Create a repo → add <code>index.html</code> → Settings → Pages → deploy from <i>main</i>.</li>
+                <li><b>Netlify:</b> Drag‑and‑drop this file onto Netlify or deploy from your Git repo.</li>
+              </ol>
+            </details>
+            <details>
+              <summary><b>Customize the crest/logo</b></summary>
+              <p>Replace the inline SVG in the header with your own SVG or an <code>&lt;img&gt;</code> pointing to <code>/assets/crest.png</code>. We can also design a more detailed crest later.</p>
+            </details>
+            <details>
+              <summary><b>Switch photos to repo files</b></summary>
+              <ol>
+                <li>Create a folder named <code>photos</code> at the root of your repo.</li>
+                <li>Upload your images there (e.g., <code>photos/amelia-1965.jpg</code>).</li>
+                <li>Open this site in admin mode and click <b>Add Repo Photo</b>, then enter the filename and a caption.</li>
+                <li>Optional: add <code>?photos=repo</code> to the URL to hide the local dropzone for this session.</li>
+                <li>Public visitors never see the upload dropzone; they only see the gallery.</li>
+              </ol>
+            </details>
+            <details>
+              <summary><b>Data model (for reference)</b></summary>
+              <pre class="code">{
+  people: [
+    { id:"jgpl-1884", name:"John Gordon Plummer", birth:1884, death:null, birthplace:"Accompong, Jamaica", father:null, mother:null, spouse:"jmpl-1890", notes:"Maroon heritage (Accompong)." },
+    { id:"jmpl-1890", name:"Jane Margaret Plummer", birth:1890, death:null, birthplace:"Jamaica", father:null, mother:null, spouse:"jgpl-1884", notes:"—" },
+    { id:"child-1920", name:"(Daughter) Plummer", birth:1920, death:null, birthplace:"Jamaica", father:"jgpl-1884", mother:"jmpl-1890", spouse:null, notes:"Born 1920." }
+  ],
+  stories:[ { id:"s1", personId:"jgpl-1884", title:"Accompong roots", text:"…" } ],
+  photos:[ { id:"ph1", src:"photos/example.jpg", caption:"…" } ]
+}
+              </pre>
+            </details>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT: data & tools -->
+      <aside class="stack">
+        <section class="card">
+          <div class="hd"><h2>Data Tools</h2></div>
+          <div class="bd stack">
+            <div class="row">
+              <button class="btn" id="exportBtn">Export Data</button>
+              <button class="btn secondary" id="importBtn">Import Data</button>
+              <input id="importFile" type="file" accept="application/json" style="display:none"/>
+            </div>
+            <label for="rootSelect2">Root Person</label>
+            <select id="rootSelect2"></select>
+            <div class="row">
+              <button class="btn secondary" id="saveLocal">Save to Browser</button>
+              <button class="btn warn" id="wipeLocal">Erase Browser Copy</button>
+            </div>
+            <details>
+              <summary><b>Raw JSON (advanced)</b></summary>
+              <textarea id="rawJson" spellcheck="false"></textarea>
+              <div class="row">
+                <button class="btn" id="applyJson">Apply JSON</button>
+                <button class="btn secondary" id="prettyJson">Pretty‑print</button>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section id="editPanel" class="card admin-only">
+          <div class="hd"><h2>Add / Edit Person</h2></div>
+          <div class="bd stack">
+            <input id="p_id" placeholder="ID (auto if blank)" />
+            <input id="p_name" placeholder="Full name" />
+            <div class="row">
+              <input id="p_birth" placeholder="Birth year (e.g., 1884)" />
+              <input id="p_death" placeholder="Death year (optional)" />
+            </div>
+            <input id="p_birthplace" placeholder="Birthplace (e.g., Accompong, Jamaica)" />
+            <div class="row">
+              <select id="p_father"></select>
+              <select id="p_mother"></select>
+            </div>
+            <select id="p_spouse"></select>
+            <textarea id="p_notes" placeholder="Notes (brief bio, occupations, migrations, etc.)"></textarea>
+            <div class="row">
+              <button class="btn" id="savePerson">Save Person</button>
+              <button class="btn secondary" id="resetForm">Reset</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="hd"><h2>Tips</h2></div>
+          <div class="bd">
+            <ul>
+              <li>Use consistent IDs (e.g., <code>lastname-YYYY</code>).</li>
+              <li>Link children by setting their <b>father</b>/<b>mother</b> fields.</li>
+              <li>Set <b>spouse</b> on both people for pairing.</li>
+            </ul>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="footer">© <span id="year"></span> Plummer Family • Built with love and stories</div>
+  </main>
+
+  <script>
+  /**********************
+   * Simple Family Hub   *
+   * All in one file     *
+   **********************/
+  const $ = (sel, ctx=document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+
+  // Modes: admin vs public
+  const ADMIN_MODE = /admin\.html$/i.test(location.pathname) || new URLSearchParams(location.search).has('admin');
+  const PUBLIC_MODE = !ADMIN_MODE;
+  document.body.classList.toggle('public', PUBLIC_MODE);
+
+  // Photo mode: 'local' (data URLs in browser) or 'repo' (files in /photos)
+  const PHOTO_MODE = (new URLSearchParams(location.search).get('photos')) || (PUBLIC_MODE ? 'repo' : 'local');
+
+  const tabs = [
+    { id:"home", label:"Home" },
+    { id:"tree", label:"Family Tree" },
+    { id:"people", label:"People" },
+    { id:"stories", label:"Stories" },
+    { id:"photos", label:"Photos" },
+    { id:"timeline", label:"Timeline" },
+    { id:"help", label:"Help" }
+  ];
+
+  // Initial seed data
+  const seed = {
+    people:[
+      { id:"jgpl-1884", name:"John Gordon Plummer", birth:1884, death:null, birthplace:"Accompong, Jamaica", father:null, mother:null, spouse:"jmpl-1890", notes:"Maroon heritage (Accompong)." },
+      { id:"jmpl-1890", name:"Jane Margaret Plummer", birth:1890, death:null, birthplace:"Jamaica", father:null, mother:null, spouse:"jgpl-1884", notes:"—" },
+      { id:"child-1920", name:"(Daughter) Plummer", birth:1920, death:null, birthplace:"Jamaica", father:"jgpl-1884", mother:"jmpl-1890", spouse:null, notes:"Born 1920." }
+    ],
+    stories:[
+      { id:"s1", personId:"jgpl-1884", title:"Accompong roots", text:"Family tradition links us to the Maroon community of Accompong."}
+    ],
+    photos:[]
+  };
+
+  // Persistent store
+  const KEY = "plummer_family_data_v1";
+  let store = loadLocal() || seed;
+  let currentRootId = null;
+
+  // Build Tabs
+  function buildTabs(){
+    const nav = $('#tabs');
+    nav.innerHTML = '';
+    tabs.forEach(t => {
+      const btn = document.createElement('button');
+      btn.className = 'tab' + (t.id==='home'?' active':'');
+      btn.textContent = t.label;
+      btn.onclick = () => activateTab(t.id);
+      nav.appendChild(btn);
+    });
+  }
+  function activateTab(id){
+    $$('.tab').forEach(b => b.classList.toggle('active', b.textContent.replace(/\s/g,'').toLowerCase() === tabs.find(t=>t.id===id).label.replace(/\s/g,'').toLowerCase()));
+    $$('.route').forEach(s => s.classList.toggle('active', s.id===id));
+    if(id==='tree') renderTree();
+    if(id==='people') renderPeople();
+    if(id==='stories') renderStories();
+    if(id==='timeline') renderTimeline();
+  }
+
+  // Helpers
+  function saveLocal(){ localStorage.setItem(KEY, JSON.stringify(store)); }
+  function loadLocal(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
+  function wipeLocal(){ localStorage.removeItem(KEY); }
+  function byId(id){ return store.people.find(p => p.id===id) || null; }
+  function childrenOf(id){ return store.people.filter(p => p.father===id || p.mother===id); }
+
+  // Populate person selects
+  function fillPersonSelect(sel, includeNull=true, label='— none —'){
+    sel.innerHTML = '';
+    if(includeNull){ const opt = document.createElement('option'); opt.value=''; opt.textContent=label; sel.appendChild(opt); }
+    store.people.sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
+      const opt = document.createElement('option'); opt.value=p.id; opt.textContent=`${p.name} ${p.birth?('('+p.birth+')'):''}`; sel.appendChild(opt);
+    });
+  }
+
+  function setRootSelects(){ fillPersonSelect($('#rootSelect'), false); fillPersonSelect($('#rootSelect2'), false); }
+
+  // Render People list
+  function renderPeople(){
+    const q = $('#search').value?.toLowerCase() || '';
+    const list = $('#peopleList');
+    list.innerHTML = '';
+    store.people
+      .filter(p => p.name.toLowerCase().includes(q))
+      .sort((a,b)=> (a.birth||9999)-(b.birth||9999) || a.name.localeCompare(b.name))
+      .forEach(p => {
+        const d = document.createElement('div');
+        d.className = 'person';
+        const mate = p.spouse ? byId(p.spouse) : null;
+        d.innerHTML = `
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+            <div>
+              <div style="font-weight:600">${p.name}</div>
+              <div class="muted">${p.birth||'—'} – ${p.death||''} ${p.birthplace?('• '+p.birthplace):''}</div>
+              <div class="muted">Parents: ${p.father?byId(p.father)?.name:'—'} / ${p.mother?byId(p.mother)?.name:'—'}</div>
+              <div class="muted">Spouse: ${mate?mate.name:'—'}</div>
+            </div>
+            <div class="row" style="flex:0 0 auto">
+              <button class="btn secondary admin-only" data-id="${p.id}" data-act="edit">Edit</button>
+              <button class="btn warn admin-only" data-id="${p.id}" data-act="del">Delete</button>
+            </div>
+          </div>`;
+        list.appendChild(d);
+      });
+  }
+
+  // Person form logic
+  function resetForm(){ ['p_id','p_name','p_birth','p_death','p_birthplace','p_notes'].forEach(id=>$('#'+id).value='');
+    fillPersonSelect($('#p_father')); fillPersonSelect($('#p_mother')); fillPersonSelect($('#p_spouse'));
+  }
+  function savePerson(){
+    const id = $('#p_id').value.trim() || ('p-'+Math.random().toString(36).slice(2,8));
+    const exists = byId(id);
+    const data = {
+      id,
+      name: $('#p_name').value.trim() || 'Unnamed',
+      birth: parseInt($('#p_birth').value)||null,
+      death: parseInt($('#p_death').value)||null,
+      birthplace: $('#p_birthplace').value.trim()||'',
+      father: $('#p_father').value||null,
+      mother: $('#p_mother').value||null,
+      spouse: $('#p_spouse').value||null,
+      notes: $('#p_notes').value.trim()
+    };
+    if(exists){ Object.assign(exists, data); }
+    else { store.people.push(data); }
+    saveLocal(); setRootSelects(); renderPeople(); populateAllSelects(); renderTree();
+    // If spouse set and reciprocal empty, mirror it
+    if(data.spouse){ const s = byId(data.spouse); if(s && s.spouse!==data.id){ s.spouse = data.id; }}
+    resetForm();
+  }
+
+  // People list actions
+  $('#peopleList').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button'); if(!btn) return;
+    const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
+    const p = byId(id);
+    if(act==='edit' && p){
+      $('#p_id').value = p.id; $('#p_name').value = p.name; $('#p_birth').value = p.birth||''; $('#p_death').value = p.death||'';
+      $('#p_birthplace').value = p.birthplace||''; $('#p_notes').value = p.notes||'';
+      fillPersonSelect($('#p_father')); $('#p_father').value = p.father||'';
+      fillPersonSelect($('#p_mother')); $('#p_mother').value = p.mother||'';
+      fillPersonSelect($('#p_spouse')); $('#p_spouse').value = p.spouse||'';
+      activateTab('people');
+      document.getElementById('editPanel')?.scrollIntoView({behavior:'smooth', block:'start'});
+      $('#p_name').focus();
+    }
+    if(act==='del' && p){
+      if(confirm('Delete '+p.name+'? This will not remove references from other people.')){
+        store.people = store.people.filter(x=>x.id!==p.id);
+        store.people.forEach(x=>{ if(x.spouse===p.id) x.spouse=null; if(x.father===p.id) x.father=null; if(x.mother===p.id) x.mother=null; });
+        saveLocal(); renderPeople(); populateAllSelects(); renderTree(); setRootSelects();
+      }
+    }
+  });
+
+  // Stories
+  function renderStories(){
+    fillPersonSelect($('#storyPerson'), false);
+    const list = $('#storyList'); list.innerHTML='';
+    store.stories.forEach(s=>{
+      const person = byId(s.personId);
+      const div = document.createElement('div'); div.className='person';
+      div.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+        <div>
+          <div class="pill">${person?person.name:'(unlinked)'} </div>
+          <div style="font-weight:600;margin-top:6px">${s.title}</div>
+          <div class="muted" style="white-space:pre-wrap">${s.text}</div>
+        </div>
+        <div class="row admin-only" style="flex:0 0 auto">
+          <button class="btn secondary" data-id="${s.id}" data-act="editStory">Edit</button>
+          <button class="btn warn" data-id="${s.id}" data-act="delStory">Delete</button>
+        </div>
+      </div>`;
+      list.appendChild(div);
+    });
+  }
+
+  $('#addStoryBtn').onclick = () => {
+    const personId = $('#storyPerson').value; if(!personId){ alert('Choose a person first.'); return; }
+    const title = prompt('Story title'); if(!title) return;
+    const text = prompt('Write a short memory (you can edit later in JSON)')||'';
+    store.stories.push({ id:'s-'+Math.random().toString(36).slice(2,7), personId, title, text });
+    saveLocal(); renderStories(); renderTimeline();
+  };
+
+  $('#storyList').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button'); if(!btn) return;
+    const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
+    const s = store.stories.find(x=>x.id===id);
+    if(!s) return;
+    if(act==='editStory'){
+      const title = prompt('Edit title', s.title) || s.title;
+      const text = prompt('Edit text', s.text) || s.text;
+      s.title = title; s.text = text; saveLocal(); renderStories(); renderTimeline();
+    }
+    if(act==='delStory'){
+      if(confirm('Delete this story?')){ store.stories = store.stories.filter(x=>x.id!==id); saveLocal(); renderStories(); renderTimeline(); }
+    }
+  });
+
+  // Photos (repo or local mode)
+  function renderPhotos(){
+    const grid = $('#photoGrid'); grid.innerHTML='';
+    store.photos.forEach(ph=>{
+      const fig = document.createElement('figure'); fig.className='card'; fig.style.padding='8px';
+      fig.innerHTML = `<img src="${ph.src || ph.dataUrl}" alt="photo" style="width:100%;height:160px;object-fit:cover;border-radius:12px"/>
+      <figcaption style="padding:8px 6px" class="muted">${ph.caption||''}</figcaption>`;
+      grid.appendChild(fig);
+    });
+  }
+
+  function setupPhotoUI(){
+    const note = document.getElementById('photosModeNote');
+    const dz = document.getElementById('dropzone');
+    const addRepoBtn = document.getElementById('addRepoPhoto');
+    if(!note||!dz||!addRepoBtn) return;
+    if(PHOTO_MODE==='repo'){
+      if(note) note.innerHTML = 'This gallery references images stored in your repo under <code>/photos</code>. Upload files there and add entries with “Add Repo Photo.”';
+      if(dz) dz.style.display = ADMIN_MODE ? 'none' : 'none';
+      if(addRepoBtn) addRepoBtn.style.display = ADMIN_MODE ? 'inline-block' : 'none';
+    } else {
+      if(note) note.textContent = 'Images stay in your browser (localStorage). To put them online, upload files to a /photos folder in your repo, then add them here as “repo photos.”';
+      if(dz) dz.style.display = ADMIN_MODE ? 'block' : 'none';
+      if(addRepoBtn) addRepoBtn.style.display = 'none';
+    }
+  }
+
+  // Add repo photo entries (file must already be uploaded to /photos in your repo)
+  document.addEventListener('click', (ev)=>{
+    const btn = ev.target.closest('#addRepoPhoto');
+    if(!btn) return;
+    const filename = prompt('Filename under /photos (e.g., my-granddad.jpg)');
+    if(!filename) return;
+    const caption = prompt('Caption (optional)') || '';
+    store.photos.push({ id:'ph-'+Math.random().toString(36).slice(2,8), src:'photos/'+filename.replace(/^\\?photos\\\//i,'').replace(/^\/+/, ''), caption });
+    saveLocal(); renderPhotos();
+  });
+
+  $('#dropzone').addEventListener('click', ()=> $('#photoInput').click());
+  $('#dropzone').addEventListener('dragover', (e)=>{ e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
+  $('#dropzone').addEventListener('drop', async (e)=>{ e.preventDefault(); handleFiles(e.dataTransfer.files); });
+  $('#photoInput').addEventListener('change', (e)=> handleFiles(e.target.files));
+  $('#clearPhotos').onclick = ()=>{ if(confirm('Clear all photos from browser storage?')){ store.photos=[]; saveLocal(); renderPhotos(); }}
+
+  function handleFiles(files){
+    if(PHOTO_MODE==='repo'){
+      alert('Repo photo mode: upload your images to /photos in your repo, then use “Add Repo Photo” to reference them.');
+      return;
+    }
+    [...files].forEach(file=>{
+      const reader = new FileReader();
+      reader.onload = () => {
+        store.photos.push({ id:'ph-'+Math.random().toString(36).slice(2,8), dataUrl: reader.result, caption: prompt('Caption (optional)')||'' });
+        saveLocal(); renderPhotos();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Simple Tree renderer using <details>/<summary>, expanded by default
+  function renderTree(){
+    const rootId = $('#rootSelect').value || store.people[0]?.id; 
+    if(!rootId) return;
+    currentRootId = rootId;
+    const root = byId(rootId);
+    const view = $('#treeView'); 
+    view.innerHTML='';
+    const ul = document.createElement('ul');
+    ul.appendChild(renderNode(root));
+    view.appendChild(ul);
+    // expanded by default
+    expandTree(true);
+    // center on root node after render
+    setTimeout(centerRoot, 0);
+  }
+  function expandTree(open=true){
+    $$('#treeView details').forEach(d => d.open = !!open);
+  }
+  function centerRoot(){
+    const el = $('#treeView [data-id="'+currentRootId+'"]');
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  function renderNode(person){
+    const li = document.createElement('li');
+    const mate = person.spouse ? byId(person.spouse) : null;
+    const life = `${person.birth||'—'}–${person.death||''}`;
+    const kids = childrenOf(person.id);
+    if(kids.length){
+      const details = document.createElement('details');
+      details.open = true; // expanded by default
+      details.setAttribute('data-id', person.id);
+      const summary = document.createElement('summary');
+      summary.innerHTML = `<span class="pill" title="${person.notes||''}">${person.name} <span class="muted"> ${life}</span>${mate?` \u2022 <b>sp.</b> ${mate.name}`:''}</span>`;
+      details.appendChild(summary);
+      const ul = document.createElement('ul');
+      kids.sort((a,b)=> (a.birth||9999)-(b.birth||9999));
+      kids.forEach(k => ul.appendChild(renderNode(k)));
+      details.appendChild(ul);
+      li.appendChild(details);
+    } else {
+      li.setAttribute('data-id', person.id);
+      li.innerHTML = `<div class="pill" title="${person.notes||''}">${person.name} <span class="muted"> ${life}</span>${mate?` \u2022 <b>sp.</b> ${mate.name}`:''}</div>`;
+    }
+    return li;
+  }
+
+  // Timeline (by birth year, with story titles)
+  function renderTimeline(){
+    const t = $('#timelineView'); t.innerHTML='';
+    const entries = [];
+    store.people.forEach(p=>{ if(p.birth) entries.push({year:p.birth, text:`${p.name} born`}); if(p.death) entries.push({year:p.death, text:`${p.name} died`}); });
+    store.stories.forEach(s=>{ entries.push({year: byId(s.personId)?.birth||null, text:`Story: ${s.title} (${byId(s.personId)?.name||'Unknown'})`}); });
+    entries.filter(e=>e.year!=null).sort((a,b)=>a.year-b.year).forEach(e=>{
+      const row = document.createElement('div'); row.className='person'; row.innerHTML = `<b>${e.year}</b> — <span class="muted">${e.text}</span>`; t.appendChild(row);
+    });
+  }
+
+  // Data tools
+  $('#exportBtn').onclick = () => {
+    const blob = new Blob([JSON.stringify(store,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='plummer-family-data.json'; a.click(); URL.revokeObjectURL(url);
+  };
+  $('#importBtn').onclick = ()=> $('#importFile').click();
+  $('#importFile').addEventListener('change', async (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    const text = await file.text();
+    try{ store = JSON.parse(text); saveLocal(); populateAllSelects(); renderPeople(); renderTree(); renderStories(); renderTimeline(); alert('Data imported!'); }
+    catch(err){ alert('Invalid JSON'); }
+  });
+
+  $('#saveLocal').onclick = () => { saveLocal(); alert('Saved to your browser.'); };
+  $('#wipeLocal').onclick = () => { if(confirm('Erase local browser copy?')){ wipeLocal(); alert('Cleared. Reload the page to reset to seed data.'); } };
+
+  $('#applyJson').onclick = () => {
+    try{ store = JSON.parse($('#rawJson').value); saveLocal(); populateAllSelects(); renderPeople(); renderTree(); renderStories(); renderTimeline(); alert('Applied.'); }
+    catch(err){ alert('Invalid JSON'); }
+  };
+  $('#prettyJson').onclick = () => { $('#rawJson').value = JSON.stringify(store,null,2); };
+
+  // Root select syncing
+  $('#rootSelect').addEventListener('change', ()=> { $('#rootSelect2').value = $('#rootSelect').value; renderTree(); centerRoot(); });
+  $('#rootSelect2').addEventListener('change', ()=> { $('#rootSelect').value = $('#rootSelect2').value; renderTree(); centerRoot(); });
+  $('#centerOnRoot').onclick = () => centerRoot();
+  $('#expandAll').onclick = () => expandTree(true);
+  $('#collapseAll').onclick = () => expandTree(false);
+
+  // Hook up form buttons
+  $('#addPersonBtn').onclick = () => { resetForm(); document.getElementById('editPanel')?.scrollIntoView({behavior:'smooth', block:'start'}); $('#p_name').focus(); };
+  $('#savePerson').onclick = savePerson;
+  $('#resetForm').onclick = resetForm;
+
+  // Search people
+  $('#search').addEventListener('input', renderPeople);
+
+  function populateAllSelects(){
+    fillPersonSelect($('#p_father'));
+    fillPersonSelect($('#p_mother'));
+    fillPersonSelect($('#p_spouse'));
+    fillPersonSelect($('#storyPerson'), false);
+    setRootSelects();
+    $('#rawJson').value = JSON.stringify(store,null,2);
+  }
+
+  // Boot
+  (function init(){
+    buildTabs();
+    populateAllSelects();
+    renderPeople(); renderStories(); setupPhotoUI(); renderPhotos(); renderTimeline();
+    $('#year').textContent = new Date().getFullYear();
+  })();
+  </script>
+</body>
+</html>
