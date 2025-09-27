@@ -225,4 +225,501 @@
               <p>By default, publish <code>index.html</code> as your public, view‑only site. To enable editing, use a second copy named <code>admin.html</code>. The page auto‑detects the file name or a query flag:</p>
               <ul>
                 <li><b>index.html</b> → public (no edit buttons, no data tools, no photo uploads)</li>
-                <li>
+                <li><b>admin.html</b> → full editor enabled</li>
+                <li>Or add <code>?admin=1</code> to the URL temporarily</li>
+              </ul>
+            </details>
+            <details open>
+              <summary><b>How do I publish this?</b></summary>
+              <ol>
+                <li>Save this file as <code>index.html</code>.</li>
+                <li><b>GitHub Pages:</b> Create a repo → add <code>index.html</code> → Settings → Pages → deploy from <i>main</i>.</li>
+                <li><b>Netlify:</b> Drag‑and‑drop this file onto Netlify or deploy from your Git repo.</li>
+              </ol>
+            </details>
+            <details>
+              <summary><b>Customize the crest/logo</b></summary>
+              <p>Replace the inline SVG in the header with your own SVG or an <code>&lt;img&gt;</code> pointing to <code>/assets/crest.png</code>. We can also design a more detailed crest later.</p>
+            </details>
+            <details>
+              <summary><b>Switch photos to repo files</b></summary>
+              <ol>
+                <li>Create a folder named <code>photos</code> at the root of your repo.</li>
+                <li>Upload your images there (e.g., <code>photos/amelia-1965.jpg</code>).</li>
+                <li>Open this site in admin mode and click <b>Add Repo Photo</b>, then enter the filename and a caption.</li>
+                <li>Optional: add <code>?photos=repo</code> to the URL to hide the local dropzone for this session.</li>
+                <li>Public visitors never see the upload dropzone; they only see the gallery.</li>
+              </ol>
+            </details>
+            <details>
+              <summary><b>Data model (for reference)</b></summary>
+              <pre class="code">{
+  people: [
+    { id:"jgpl-1884", name:"John Gordon Plummer", birth:1884, death:null, birthplace:"Accompong, Jamaica", father:null, mother:null, spouse:"jmpl-1890", notes:"Maroon heritage (Accompong)." },
+    { id:"jmpl-1890", name:"Jane Margaret Plummer", birth:1890, death:null, birthplace:"Jamaica", father:null, mother:null, spouse:"jgpl-1884", notes:"—" },
+    { id:"child-1920", name:"(Daughter) Plummer", birth:1920, death:null, birthplace:"Jamaica", father:"jgpl-1884", mother:"jmpl-1890", spouse:null, notes:"Born 1920." }
+  ],
+  stories:[ { id:"s1", personId:"jgpl-1884", title:"Accompong roots", text:"…" } ],
+  photos:[ { id:"ph1", src:"photos/example.jpg", caption:"…" } ]
+}
+              </pre>
+            </details>
+          </div>
+        </section>
+      </div>
+
+            <aside class="stack">
+        <section class="card">
+          <div class="hd"><h2>Data Tools</h2></div>
+          <div class="bd stack">
+            <div class="row">
+              <button class="btn" id="exportBtn">Export Data</button>
+              <button class="btn secondary" id="importBtn">Import Data</button>
+              <input id="importFile" type="file" accept="application/json" style="display:none"/>
+            </div>
+            <label for="rootSelect2">Root Person</label>
+            <select id="rootSelect2"></select>
+            <div class="row">
+              <button class="btn secondary" id="saveLocal">Save to Browser</button>
+              <button class="btn warn" id="wipeLocal">Erase Browser Copy</button>
+            </div>
+            <details>
+              <summary><b>Raw JSON (advanced)</b></summary>
+              <textarea id="rawJson" spellcheck="false"></textarea>
+              <div class="row">
+                <button class="btn" id="applyJson">Apply JSON</button>
+                <button class="btn secondary" id="prettyJson">Pretty‑print</button>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section id="editPanel" class="card admin-only">
+          <div class="hd"><h2>Add / Edit Person</h2></div>
+          <div class="bd stack">
+            <input id="p_id" placeholder="ID (auto if blank)" />
+            <input id="p_name" placeholder="Full name" />
+            <div class="row">
+              <input id="p_birth" placeholder="Birth year (e.g., 1884)" />
+              <input id="p_death" placeholder="Death year (optional)" />
+            </div>
+            <input id="p_birthplace" placeholder="Birthplace (e.g., Accompong, Jamaica)" />
+            <div class="row">
+              <select id="p_father"></select>
+              <select id="p_mother"></select>
+            </div>
+            <select id="p_spouse"></select>
+            <textarea id="p_notes" placeholder="Notes (brief bio, occupations, migrations, etc.)"></textarea>
+            <div class="row">
+              <button class="btn" id="savePerson">Save Person</button>
+              <button class="btn secondary" id="resetForm">Reset</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="hd"><h2>Tips</h2></div>
+          <div class="bd">
+            <ul>
+              <li>Use consistent IDs (e.g., <code>lastname-YYYY</code>).</li>
+              <li>Link children by setting their <b>father</b>/<b>mother</b> fields.</li>
+              <li>Set <b>spouse</b> on both people for pairing.</li>
+            </ul>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="footer">© <span id="year"></span> Plummer Family • Built with love and stories</div>
+  </main>
+
+  <script>
+  /**********************
+   * Simple Family Hub   *
+   * All in one file     *
+   **********************/
+  const $ = (sel, ctx=document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+
+  // Modes: admin vs public
+  const ADMIN_MODE = /admin\.html$/i.test(location.pathname) || new URLSearchParams(location.search).has('admin');
+  const PUBLIC_MODE = !ADMIN_MODE;
+  document.body.classList.toggle('public', PUBLIC_MODE);
+
+  // Photo mode: 'local' (data URLs in browser) or 'repo' (files in /photos)
+  const PHOTO_MODE = (new URLSearchParams(location.search).get('photos')) || (PUBLIC_MODE ? 'repo' : 'local');
+
+  const tabs = [
+    { id:"home", label:"Home" },
+    { id:"tree", label:"Family Tree" },
+    { id:"people", label:"People" },
+    { id:"stories", label:"Stories" },
+    { id:"photos", label:"Photos" },
+    { id:"timeline", label:"Timeline" },
+    { id:"help", label:"Help" }
+  ];
+
+  // *** NEW LOGIC: Remove 'People' tab in public mode ***
+  if (!ADMIN_MODE) {
+    const peopleTabIndex = tabs.findIndex(t => t.id === 'people');
+    if (peopleTabIndex > -1) {
+      tabs.splice(peopleTabIndex, 1);
+    }
+  }
+  // ******************************************************
+
+  // Initial seed data
+  const seed = {
+    people:[
+      { id:"jgpl-1884", name:"John Gordon Plummer", birth:1884, death:null, birthplace:"Accompong, Jamaica", father:null, mother:null, spouse:"jmpl-1890", notes:"Maroon heritage (Accompong)." },
+      { id:"jmpl-1890", name:"Jane Margaret Plummer", birth:1890, death:null, birthplace:"Jamaica", father:null, mother:null, spouse:"jgpl-1884", notes:"—" },
+      { id:"child-1920", name:"(Daughter) Plummer", birth:1920, death:null, birthplace:"Jamaica", father:"jgpl-1884", mother:"jmpl-1890", spouse:null, notes:"Born 1920." }
+    ],
+    stories:[
+      { id:"s1", personId:"jgpl-1884", title:"Accompong roots", text:"Family tradition links us to the Maroon community of Accompong."}
+    ],
+    photos:[]
+  };
+
+  // Persistent store
+  const KEY = "plummer_family_data_v1";
+  let store = loadLocal() || seed;
+  let currentRootId = null;
+
+  // Build Tabs
+  function buildTabs(){
+    const nav = $('#tabs');
+    nav.innerHTML = '';
+    tabs.forEach(t => {
+      const btn = document.createElement('button');
+      btn.className = 'tab' + (t.id==='home'?' active':'');
+      btn.textContent = t.label;
+      btn.onclick = () => activateTab(t.id);
+      nav.appendChild(btn);
+    });
+  }
+  function activateTab(id){
+    $$('.tab').forEach(b => b.classList.toggle('active', b.textContent.replace(/\s/g,'').toLowerCase() === tabs.find(t=>t.id===id).label.replace(/\s/g,'').toLowerCase()));
+    $$('.route').forEach(s => s.classList.toggle('active', s.id===id));
+    if(id==='tree') renderTree();
+    if(id==='people') renderPeople();
+    if(id==='stories') renderStories();
+    if(id==='timeline') renderTimeline();
+  }
+
+  // Helpers
+  function saveLocal(){ localStorage.setItem(KEY, JSON.stringify(store)); }
+  function loadLocal(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
+  function wipeLocal(){ localStorage.removeItem(KEY); }
+  function byId(id){ return store.people.find(p => p.id===id) || null; }
+  function childrenOf(id){ return store.people.filter(p => p.father===id || p.mother===id); }
+
+  // Populate person selects
+  function fillPersonSelect(sel, includeNull=true, label='— none —'){
+    sel.innerHTML = '';
+    if(includeNull){ const opt = document.createElement('option'); opt.value=''; opt.textContent=label; sel.appendChild(opt); }
+    store.people.sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
+      const opt = document.createElement('option'); opt.value=p.id; opt.textContent=`${p.name} ${p.birth?('('+p.birth+')'):''}`; sel.appendChild(opt);
+    });
+  }
+
+  function setRootSelects(){ fillPersonSelect($('#rootSelect'), false); fillPersonSelect($('#rootSelect2'), false); }
+
+  // Render People list
+  function renderPeople(){
+    const q = $('#search').value?.toLowerCase() || '';
+    const list = $('#peopleList');
+    list.innerHTML = '';
+    store.people
+      .filter(p => p.name.toLowerCase().includes(q))
+      .sort((a,b)=> (a.birth||9999)-(b.birth||9999) || a.name.localeCompare(b.name))
+      .forEach(p => {
+        const d = document.createElement('div');
+        d.className = 'person';
+        const mate = p.spouse ? byId(p.spouse) : null;
+        d.innerHTML = `
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+            <div>
+              <div style="font-weight:600">${p.name}</div>
+              <div class="muted">${p.birth||'—'} – ${p.death||''} ${p.birthplace?('• '+p.birthplace):''}</div>
+              <div class="muted">Parents: ${p.father?byId(p.father)?.name:'—'} / ${p.mother?byId(p.mother)?.name:'—'}</div>
+              <div class="muted">Spouse: ${mate?mate.name:'—'}</div>
+            </div>
+            <div class="row" style="flex:0 0 auto">
+              <button class="btn secondary admin-only" data-id="${p.id}" data-act="edit">Edit</button>
+              <button class="btn warn admin-only" data-id="${p.id}" data-act="del">Delete</button>
+            </div>
+          </div>`;
+        list.appendChild(d);
+      });
+  }
+
+  // Person form logic
+  function resetForm(){ ['p_id','p_name','p_birth','p_death','p_birthplace','p_notes'].forEach(id=>$('#'+id).value='');
+    fillPersonSelect($('#p_father')); fillPersonSelect($('#p_mother')); fillPersonSelect($('#p_spouse'));
+  }
+  function savePerson(){
+    const id = $('#p_id').value.trim() || ('p-'+Math.random().toString(36).slice(2,8));
+    const exists = byId(id);
+    const data = {
+      id,
+      name: $('#p_name').value.trim() || 'Unnamed',
+      birth: parseInt($('#p_birth').value)||null,
+      death: parseInt($('#p_death').value)||null,
+      birthplace: $('#p_birthplace').value.trim()||'',
+      father: $('#p_father').value||null,
+      mother: $('#p_mother').value||null,
+      spouse: $('#p_spouse').value||null,
+      notes: $('#p_notes').value.trim()
+    };
+    if(exists){ Object.assign(exists, data); }
+    else { store.people.push(data); }
+    saveLocal(); setRootSelects(); renderPeople(); populateAllSelects(); renderTree();
+    // If spouse set and reciprocal empty, mirror it
+    if(data.spouse){ const s = byId(data.spouse); if(s && s.spouse!==data.id){ s.spouse = data.id; }}
+    resetForm();
+  }
+
+  // People list actions
+  $('#peopleList').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button'); if(!btn) return;
+    const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
+    const p = byId(id);
+    if(act==='edit' && p){
+      $('#p_id').value = p.id; $('#p_name').value = p.name; $('#p_birth').value = p.birth||''; $('#p_death').value = p.death||'';
+      $('#p_birthplace').value = p.birthplace||''; $('#p_notes').value = p.notes||'';
+      fillPersonSelect($('#p_father')); $('#p_father').value = p.father||'';
+      fillPersonSelect($('#p_mother')); $('#p_mother').value = p.mother||'';
+      fillPersonSelect($('#p_spouse')); $('#p_spouse').value = p.spouse||'';
+      activateTab('people');
+      document.getElementById('editPanel')?.scrollIntoView({behavior:'smooth', block:'start'});
+      $('#p_name').focus();
+    }
+    if(act==='del' && p){
+      if(confirm('Delete '+p.name+'? This will not remove references from other people.')){
+        store.people = store.people.filter(x=>x.id!==p.id);
+        store.people.forEach(x=>{ if(x.spouse===p.id) x.spouse=null; if(x.father===p.id) x.father=null; if(x.mother===p.id) x.mother=null; });
+        saveLocal(); renderPeople(); populateAllSelects(); renderTree(); setRootSelects();
+      }
+    }
+  });
+
+  // Stories
+  function renderStories(){
+    fillPersonSelect($('#storyPerson'), false);
+    const list = $('#storyList'); list.innerHTML='';
+    store.stories.forEach(s=>{
+      const person = byId(s.personId);
+      const div = document.createElement('div'); div.className='person';
+      div.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+        <div>
+          <div class="pill">${person?person.name:'(unlinked)'} </div>
+          <div style="font-weight:600;margin-top:6px">${s.title}</div>
+          <div class="muted" style="white-space:pre-wrap">${s.text}</div>
+        </div>
+        <div class="row admin-only" style="flex:0 0 auto">
+          <button class="btn secondary" data-id="${s.id}" data-act="editStory">Edit</button>
+          <button class="btn warn" data-id="${s.id}" data-act="delStory">Delete</button>
+        </div>
+      </div>`;
+      list.appendChild(div);
+    });
+  }
+
+  $('#addStoryBtn').onclick = () => {
+    const personId = $('#storyPerson').value; if(!personId){ alert('Choose a person first.'); return; }
+    const title = prompt('Story title'); if(!title) return;
+    const text = prompt('Write a short memory (you can edit later in JSON)')||'';
+    store.stories.push({ id:'s-'+Math.random().toString(36).slice(2,7), personId, title, text });
+    saveLocal(); renderStories(); renderTimeline();
+  };
+
+  $('#storyList').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button'); if(!btn) return;
+    const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
+    const s = store.stories.find(x=>x.id===id);
+    if(!s) return;
+    if(act==='editStory'){
+      const title = prompt('Edit title', s.title) || s.title;
+      const text = prompt('Edit text', s.text) || s.text;
+      s.title = title; s.text = text; saveLocal(); renderStories(); renderTimeline();
+    }
+    if(act==='delStory'){
+      if(confirm('Delete this story?')){ store.stories = store.stories.filter(x=>x.id!==id); saveLocal(); renderStories(); renderTimeline(); }
+    }
+  });
+
+  // Photos (repo or local mode)
+  function renderPhotos(){
+    const grid = $('#photoGrid'); grid.innerHTML='';
+    store.photos.forEach(ph=>{
+      const fig = document.createElement('figure'); fig.className='card'; fig.style.padding='8px';
+      fig.innerHTML = `<img src="${ph.src || ph.dataUrl}" alt="photo" style="width:100%;height:160px;object-fit:cover;border-radius:12px"/>
+      <figcaption style="padding:8px 6px" class="muted">${ph.caption||''}</figcaption>`;
+      grid.appendChild(fig);
+    });
+  }
+
+  function setupPhotoUI(){
+    const note = document.getElementById('photosModeNote');
+    const dz = document.getElementById('dropzone');
+    const addRepoBtn = document.getElementById('addRepoPhoto');
+    if(!note||!dz||!addRepoBtn) return;
+    if(PHOTO_MODE==='repo'){
+      if(note) note.innerHTML = 'This gallery references images stored in your repo under <code>/photos</code>. Upload files there and add entries with “Add Repo Photo.”';
+      if(dz) dz.style.display = ADMIN_MODE ? 'none' : 'none';
+      if(addRepoBtn) addRepoBtn.style.display = ADMIN_MODE ? 'inline-block' : 'none';
+    } else {
+      if(note) note.textContent = 'Images stay in your browser (localStorage). To put them online, upload files to a /photos folder in your repo, then add them here as “repo photos.”';
+      if(dz) dz.style.display = ADMIN_MODE ? 'block' : 'none';
+      if(addRepoBtn) addRepoBtn.style.display = 'none';
+    }
+  }
+
+  // Add repo photo entries (file must already be uploaded to /photos in your repo)
+  document.addEventListener('click', (ev)=>{
+    const btn = ev.target.closest('#addRepoPhoto');
+    if(!btn) return;
+    const filename = prompt('Filename under /photos (e.g., my-granddad.jpg)');
+    if(!filename) return;
+    const caption = prompt('Caption (optional)') || '';
+    store.photos.push({ id:'ph-'+Math.random().toString(36).slice(2,8), src:'photos/'+filename.replace(/^\\?photos\\\//i,'').replace(/^\/+/, ''), caption });
+    saveLocal(); renderPhotos();
+  });
+
+  $('#dropzone').addEventListener('click', ()=> $('#photoInput').click());
+  $('#dropzone').addEventListener('dragover', (e)=>{ e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
+  $('#dropzone').addEventListener('drop', async (e)=>{ e.preventDefault(); handleFiles(e.dataTransfer.files); });
+  $('#photoInput').addEventListener('change', (e)=> handleFiles(e.target.files));
+  $('#clearPhotos').onclick = ()=>{ if(confirm('Clear all photos from browser storage?')){ store.photos=[]; saveLocal(); renderPhotos(); }}
+
+  function handleFiles(files){
+    if(PHOTO_MODE==='repo'){
+      alert('Repo photo mode: upload your images to /photos in your repo, then use “Add Repo Photo” to reference them.');
+      return;
+    }
+    [...files].forEach(file=>{
+      const reader = new FileReader();
+      reader.onload = () => {
+        store.photos.push({ id:'ph-'+Math.random().toString(36).slice(2,8), dataUrl: reader.result, caption: prompt('Caption (optional)')||'' });
+        saveLocal(); renderPhotos();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Simple Tree renderer using <details>/<summary>, expanded by default
+  function renderTree(){
+    const rootId = $('#rootSelect').value || store.people[0]?.id; 
+    if(!rootId) return;
+    currentRootId = rootId;
+    const root = byId(rootId);
+    const view = $('#treeView'); 
+    view.innerHTML='';
+    const ul = document.createElement('ul');
+    ul.appendChild(renderNode(root));
+    view.appendChild(ul);
+    // expanded by default
+    expandTree(true);
+    // center on root node after render
+    setTimeout(centerRoot, 0);
+  }
+  function expandTree(open=true){
+    $$('#treeView details').forEach(d => d.open = !!open);
+  }
+  function centerRoot(){
+    const el = $('#treeView [data-id="'+currentRootId+'"]');
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  function renderNode(person){
+    const li = document.createElement('li');
+    const mate = person.spouse ? byId(person.spouse) : null;
+    const life = `${person.birth||'—'}–${person.death||''}`;
+    const kids = childrenOf(person.id);
+    if(kids.length){
+      const details = document.createElement('details');
+      details.open = true; // expanded by default
+      details.setAttribute('data-id', person.id);
+      const summary = document.createElement('summary');
+      summary.innerHTML = `<span class="pill" title="${person.notes||''}">${person.name} <span class="muted"> ${life}</span>${mate?` \u2022 <b>sp.</b> ${mate.name}`:''}</span>`;
+      details.appendChild(summary);
+      const ul = document.createElement('ul');
+      kids.sort((a,b)=> (a.birth||9999)-(b.birth||9999));
+      kids.forEach(k => ul.appendChild(renderNode(k)));
+      details.appendChild(ul);
+      li.appendChild(details);
+    } else {
+      li.setAttribute('data-id', person.id);
+      li.innerHTML = `<div class="pill" title="${person.notes||''}">${person.name} <span class="muted"> ${life}</span>${mate?` \u2022 <b>sp.</b> ${mate.name}`:''}</div>`;
+    }
+    return li;
+  }
+
+  // Timeline (by birth year, with story titles)
+  function renderTimeline(){
+    const t = $('#timelineView'); t.innerHTML='';
+    const entries = [];
+    store.people.forEach(p=>{ if(p.birth) entries.push({year:p.birth, text:`${p.name} born`}); if(p.death) entries.push({year:p.death, text:`${p.name} died`}); });
+    store.stories.forEach(s=>{ entries.push({year: byId(s.personId)?.birth||null, text:`Story: ${s.title} (${byId(s.personId)?.name||'Unknown'})`}); });
+    entries.filter(e=>e.year!=null).sort((a,b)=>a.year-b.year).forEach(e=>{
+      const row = document.createElement('div'); row.className='person'; row.innerHTML = `<b>${e.year}</b> — <span class="muted">${e.text}</span>`; t.appendChild(row);
+    });
+  }
+
+  // Data tools
+  $('#exportBtn').onclick = () => {
+    const blob = new Blob([JSON.stringify(store,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='plummer-family-data.json'; a.click(); URL.revokeObjectURL(url);
+  };
+  $('#importBtn').onclick = ()=> $('#importFile').click();
+  $('#importFile').addEventListener('change', async (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    const text = await file.text();
+    try{ store = JSON.parse(text); saveLocal(); populateAllSelects(); renderPeople(); renderTree(); renderStories(); renderTimeline(); alert('Data imported!'); }
+    catch(err){ alert('Invalid JSON'); }
+  });
+
+  $('#saveLocal').onclick = () => { saveLocal(); alert('Saved to your browser.'); };
+  $('#wipeLocal').onclick = () => { if(confirm('Erase local browser copy?')){ wipeLocal(); alert('Cleared. Reload the page to reset to seed data.'); } };
+
+  $('#applyJson').onclick = () => {
+    try{ store = JSON.parse($('#rawJson').value); saveLocal(); populateAllSelects(); renderPeople(); renderTree(); renderStories(); renderTimeline(); alert('Applied.'); }
+    catch(err){ alert('Invalid JSON'); }
+  };
+  $('#prettyJson').onclick = () => { $('#rawJson').value = JSON.stringify(store,null,2); };
+
+  // Root select syncing
+  $('#rootSelect').addEventListener('change', ()=> { $('#rootSelect2').value = $('#rootSelect').value; renderTree(); centerRoot(); });
+  $('#rootSelect2').addEventListener('change', ()=> { $('#rootSelect').value = $('#rootSelect2').value; renderTree(); centerRoot(); });
+  $('#centerOnRoot').onclick = () => centerRoot();
+  $('#expandAll').onclick = () => expandTree(true);
+  $('#collapseAll').onclick = () => expandTree(false);
+
+  // Hook up form buttons
+  $('#addPersonBtn').onclick = () => { resetForm(); document.getElementById('editPanel')?.scrollIntoView({behavior:'smooth', block:'start'}); $('#p_name').focus(); };
+  $('#savePerson').onclick = savePerson;
+  $('#resetForm').onclick = resetForm;
+
+  // Search people
+  $('#search').addEventListener('input', renderPeople);
+
+  function populateAllSelects(){
+    fillPersonSelect($('#p_father'));
+    fillPersonSelect($('#p_mother'));
+    fillPersonSelect($('#p_spouse'));
+    fillPersonSelect($('#storyPerson'), false);
+    setRootSelects();
+    $('#rawJson').value = JSON.stringify(store,null,2);
+  }
+
+  // Boot
+  (function init(){
+    buildTabs();
+    populateAllSelects();
+    renderPeople(); renderStories(); setupPhotoUI(); renderPhotos(); renderTimeline();
+    $('#year').textContent = new Date().getFullYear();
+  })();
+  </script>
+</body>
+</html>
