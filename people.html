@@ -40,8 +40,82 @@
   import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
   import { getFirestore, onSnapshot, collection, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
   
-  // FIX: Import the core utility functions from the external script file
-  import { cardPerson, filterPeople } from './assets/script.js';
+  // --- UTILITY FUNCTIONS (Integrated to fix module errors) ---
+  
+  /**
+   * Creates the HTML card structure for a single person object.
+   * @param {Object} p - The person object from people.json (or Firestore).
+   * @returns {string} - The HTML string for the person card.
+   */
+  function cardPerson(p) {
+    // 1. Calculate the life years (e.g., "1900 - 1980")
+    const birthYear = p.birth?.date?.slice(-4) || p.birthYear || '';
+    const deathYear = p.death?.date?.slice(-4) || '';
+    
+    const lifeYears = [birthYear, deathYear].filter(Boolean).join(' - ');
+    const dates = lifeYears ? ` (${lifeYears})` : '';
+
+    // 2. Format detailed birth/death info for the card body
+    const formatEvent = (event, label) => {
+        if (!event || (!event.place && !event.date)) return '';
+        const place = event.place ? event.place : '';
+        const date = event.date ? `(${event.date})` : '';
+        return `<strong>${label}:</strong> ${place} ${date}<br>`;
+    };
+    
+    const birthInfo = formatEvent(p.birth, 'Born');
+    const deathInfo = formatEvent(p.death, 'Died');
+    const marriageInfo = formatEvent(p.marriage, 'Married');
+    
+    const lifeEvents = birthInfo || deathInfo || marriageInfo ? 
+      `<p class="small details-list">
+        ${birthInfo}
+        ${deathInfo}
+        ${marriageInfo}
+      </p>` 
+      : '';
+
+    // 3. Assemble the final card HTML
+    return `<article class="card">
+        <h3>${p.name || 'Unknown Person'}${dates}</h3>
+        ${lifeEvents}
+        <p>${p.summary || 'No summary available.'}</p>
+        <p class="small id-tag">ID: ${p.id || 'N/A'}</p>
+    </article>`;
+  }
+
+  /**
+   * Filters the list of people based on a search query.
+   * @param {Array<Object>} list - The full list of people.
+   * @param {string} query - The search string from the input box.
+   * @returns {Array<Object>} - The filtered list of people.
+   */
+  function filterPeople(list, query) {
+    const q = query.toLowerCase().trim();
+    if (!q) {
+        return list; // Return all if query is empty
+    }
+
+    return list.filter(p => {
+        // Concatenate all searchable fields into one large string
+        const searchableText = [
+            p.name,
+            p.summary,
+            p.location,
+            p.birth?.date,
+            p.birth?.place,
+            p.death?.date,
+            p.death?.place,
+            p.marriage?.date,
+            p.marriage?.place,
+            p.id,
+        ].filter(s => s).join(' ').toLowerCase(); 
+
+        return searchableText.includes(q);
+    });
+  }
+
+  // --- FIREBASE AND INITIALIZATION ---
   
   // setLogLevel('debug'); // Uncomment for debugging
   
@@ -61,11 +135,9 @@
   
   let peopleList = [];
 
-  // Define the path to the public collection (or private if admin mode only)
-  // For a basic setup, we'll read the data saved by the admin user.
+  // Define the path to the user's private collection
   function getPeopleCollectionRef(currentUserId) {
     if (!currentUserId) throw new Error("User ID is required for path.");
-    // We assume the admin saved data to their private space
     const path = `/artifacts/${appId}/users/${currentUserId}/people`;
     return collection(db, path);
   }
@@ -91,13 +163,11 @@
   }
 
   function handleSearch() {
-    // filterPeople is now imported
     const filteredList = filterPeople(peopleList, searchInput.value);
     render(filteredList);
   }
   
   function render(items) {
-    // cardPerson is now imported
     container.innerHTML = items.map(cardPerson).join('');
   }
 
@@ -108,8 +178,6 @@
           subscribeToPeople(userId);
       } else {
           // Sign in anonymously to get a userId to read data from the system's default admin (or just to authenticate).
-          // For this non-multiuser app, we will assume one primary data source ID for reading.
-          // In a real scenario, this would be complex. For a simple demo, we'll try to sign in anonymously.
           if (initialAuthToken) {
               await signInWithCustomToken(auth, initialAuthToken);
           } else {
@@ -123,7 +191,6 @@
   <footer>
     © <span id="y"></span> Plummer Family — Built with care. | <span class="small">Admin: open <code>/admin.html?key=YOURSECRET</code></span>
   </footer>
-  <!-- Removed redundant <script src="./assets/script.js"></script> as functions are imported above -->
   <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
 </body>
 </html>
