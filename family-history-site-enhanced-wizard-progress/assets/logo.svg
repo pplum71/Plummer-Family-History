@@ -1,0 +1,14 @@
+
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Family crest">
+  <defs>
+    <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#8bd3ff"/>
+      <stop offset="1" stop-color="#ffd28b"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#g)" stroke-width="2">
+    <path d="M8 10h48v20c0 14-10 22-24 24C18 52 8 44 8 30V10z" fill="rgba(255,255,255,0.06)"/>
+    <path d="M22 18h20M22 26h20M22 34h20"/>
+    <circle cx="32" cy="44" r="4" fill="url(#g)"/>
+  </g>
+</svg>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Home · Plummer Family History</title>
+  <meta name="description" content="A multipage family history site for preserving stories, photos, and the family tree." />
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+  
+    <nav class="nav">
+      <div class="nav-inner nav">
+        <div class="brand">
+          <img src="./assets/logo.png" alt="Plummer Crest" style="height:28px;width:auto" />
+          <span>Plummer Family History</span>
+        </div>
+        <ul class="nav">
+          <li><a href="index.html" aria-current="page">Home</a></li>
+          <li><a href="family-tree.html" >Family Tree</a></li>
+          <li><a href="stories.html" >Stories</a></li>
+          <li><a href="photos.html" >Photos</a></li>
+          <li><a href="contact.html" >Contact</a></li>
+          <!-- Admin is intentionally not linked in nav -->
+        </ul>
+      </div>
+    </nav>
+    
+  
+<header class="hero">
+  <div class="container">
+    <span class="kicker">Welcome</span>
+    <h1>Our Family • Our Roots • Our Future</h1>
+    <p>This site preserves our story—ancestors, migrations, traditions, and the everyday moments that bind us. Browse the tree, read family stories, and share your memories.</p>
+    <div class="cta">
+      <a class="button" href="family-tree.html">View Family Tree</a>
+      <a class="button" href="stories.html">Read Stories</a>
+      <a class="button" href="photos.html">See Photos</a>
+    </div>
+  </div>
+</header>
+<main class="container">
+  <section class="grid">
+    <article class="card">
+      <h3>Family Tree</h3>
+      <p>Explore branches, find connections, and trace our lineage.</p>
+      <p class="small">Tip: Keep private details for living people out of the public site.</p>
+    </article>
+    <article class="card">
+      <h3>People Directory</h3>
+      <p>A quick index of names with birth years and places, pulled from <code>data/people.json</code>.</p>
+    </article>
+    <article class="card">
+      <h3>Stories & Recipes</h3>
+      <p>Capture memories, milestones, and the flavors that tell our story.</p>
+    </article>
+  </section>
+</main>
+
+  <footer>
+    © <span id="y"></span> Plummer Family — Built with care. | <span class="small">Admin: open <code>/admin.html?key=YOURSECRET</code></span>
+  </footer>
+  <script src="./assets/script.js"></script>
+  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+</body>
+</html>
