@@ -21,37 +21,79 @@
           <li><a href="stories.html" aria-current="page">Stories</a></li>
           <li><a href="photos.html" >Photos</a></li>
           <li><a href="contact.html" >Contact</a></li>
-          <!-- Admin is intentionally not linked in nav -->
-        </ul>
+          </ul>
       </div>
     </nav>
     
   
 <main class="container">
-  <h1>Stories</h1>
+  <h1>Family Stories & Recipes</h1>
+  <p class="small" id="data-status">Initializing Firebase...</p>
   <section id="stories" class="grid"></section>
 </main>
-<script>
-(async () => {
-  try{
-    const stories = await loadJSON('./data/stories.json');
-    const wrap = (s) => `<article class="card"><div class="badge">${s.year||''}</div><h3>${s.title}</h3><p>${s.summary||''}</p></article>`;
-    const el = document.getElementById('stories');
-    if (Array.isArray(stories) && stories.length) {
-      el.innerHTML = stories.map(wrap).join('');
-    } else {
-      el.innerHTML = `<div class="alert">No family stories have been added yet — check back soon, or add some in <a href="./admin.html?key=YOURSECRET">Admin → Stories Manager</a> <a class="button" href="./admin.html?key=YOURSECRET#stories-manager">+ Add now</a>.</div>`;
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  import { getFirestore, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  
+  // --- UTILITY FUNCTIONS (Integrated to ensure module stability) ---
+  
+  function renderStories(stories) {
+    const container = document.getElementById('stories');
+    if (stories.length === 0) {
+        container.innerHTML = '<div class="alert">No stories found. Add some in the Admin panel!</div>';
+        return;
     }
-  }catch(e){
-    document.getElementById('stories').innerHTML = `<div class="alert">No family stories have been added yet — check back soon, or add some in <a href="./admin.html?key=YOURSECRET">Admin → Stories Manager</a> <a class="button" href="./admin.html?key=YOURSECRET#stories-manager">+ Add now</a>.</div>`;
-  }
-})();
-</script>
 
-  <footer>
-    © <span id="y"></span> Plummer Family — Built with care. | <span class="small">Admin: open <code>/admin.html?key=YOURSECRET</code></span>
-  </footer>
-  <script src="./assets/script.js"></script>
-  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
-</body>
-</html>
+    container.innerHTML = stories.map(s => `
+        <article class="card">
+            <h3>${s.title}</h3>
+            <p class="small">${s.year ? s.year : 'N/A'} • By ${s.author || 'Unknown'}</p>
+            <p>${s.summary || s.content.substring(0, 150) + '...'}</p>
+            <details>
+                <summary class="button small-button">Read Full Story</summary>
+                <div class="story-content" style="margin-top: 10px; white-space: pre-wrap;">${s.content}</div>
+            </details>
+        </article>
+    `).join('');
+  }
+
+  // --- FIREBASE AND INITIALIZATION ---
+  
+  // These variables need to be defined outside of the Canvas environment or passed in. 
+  // Assuming they are available (as Firebase is already set up).
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+  const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+  const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+  
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  
+  const statusEl = document.getElementById('data-status');
+  
+  let userId = null;
+
+  function getStoriesCollectionRef(currentUserId) {
+    if (!currentUserId) throw new Error("User ID is required for path.");
+    // This is the collection where your stories data is saved by the admin
+    const path = `/artifacts/${appId}/users/${currentUserId}/stories`;
+    return collection(db, path);
+  }
+
+  function subscribeToStories(currentUserId) {
+    const storiesCollectionRef = getStoriesCollectionRef(currentUserId);
+    
+    // onSnapshot provides real-time updates
+    onSnapshot(storiesCollectionRef, (snapshot) => {
+        const storiesList = snapshot.docs.map(doc => doc.data());
+        renderStories(storiesList);
+        statusEl.textContent = `Data: Loaded ${storiesList.length} stories from Firestore.`;
+
+    }, (error) => {
+        console.error("Error fetching stories data:", error);
+        statusEl.textContent = `Error loading stories: ${error.message}`;
+    });
+  }
+
+  // --- AUTHENTICATION
