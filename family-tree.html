@@ -21,8 +21,7 @@
           <li><a href="stories.html" >Stories</a></li>
           <li><a href="photos.html" >Photos</a></li>
           <li><a href="contact.html" >Contact</a></li>
-          <!-- Admin is intentionally not linked in nav -->
-        </ul>
+          </ul>
       </div>
     </nav>
     
@@ -30,533 +29,272 @@
 
 <main class="container">
   <h1>Family Tree</h1>
-  <p class="small">This tree is derived from <code>data/people.json</code> using <code>parents</code> arrays. Click names to expand/collapse.</p>
-  <div id="tree"></div>
+  <p class="small" id="data-status">Initializing Firebase. Tree loading in real-time...</p>
+
+  <section style="margin-top:24px">
+    <h2>Interactive Tree (D3 SVG)</h2>
+    <p class="small">This tree is generated from **Firestore** using the <code>parents</code> links. Click nodes to expand/collapse. Years reflect full lifespan.</p>
+    <div id="d3-tree-root" class="figure"></div>
+  </section>
+
+  <section style="margin-top:24px">
+    <h2>Simple Collapsible List</h2>
+    <div id="tree"></div>
+  </section>
+  
+  <div id="tree-embed-wrap" class="figure" style="margin-top:24px">
+    <h2>Tree Embed Placeholder</h2>
+    <p class="small">If you are using an external tree viewer, it would load here from <code>data/tree-embed.html</code>.</p>
+  </div>
 </main>
-<script>
-(async () => {
-  function slug(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
-  const people = await fetch('./data/people.json', {cache:'no-store'}).then(r=>r.json());
-  const byId = new Map(people.filter(p=>p.id).map(p=>[p.id, p]));
-  const children = {};
-  people.forEach(p => (p.parents||[]).forEach(parentId => {
-    (children[parentId] ||= []).push(p.id);
-  }));
 
-  // roots: have no parents in-file
-  const allIds = new Set(people.filter(p=>p.id).map(p=>p.id));
-  const referencedAsChild = new Set(people.flatMap(p => (p.parents||[])));
-  const roots = [...allIds].filter(id => !referencedAsChild.has(id));
-
-  function label(p){
-    const yr = p.birthYear ? ` (${p.birthYear})` : '';
-    return `${p.name||p.id}${yr}`;
-  }
-
-  function nodeHTML(id){
-    const p = byId.get(id) || {id};
-    const kids = (children[id]||[]).sort((a,b)=> (byId.get(a)?.birthYear||'').localeCompare(byId.get(b)?.birthYear||''));
-    const hasKids = kids.length>0;
-    return `<li>
-      <span class="tree-node" data-id="${id}" ${hasKids?'':'data-leaf="1"'}>${label(p)}</span>
-      ${hasKids? `<ul class="collapsed">${kids.map(nodeHTML).join('')}</ul>` : ''}
-    </li>`;
-  }
-
-  const html = `<ul class="tree-root">${roots.map(nodeHTML).join('')}</ul>`;
-  const el = document.getElementById('tree');
-  el.innerHTML = html;
-
-  // styles + toggle
-  const style = document.createElement('style');
-  style.textContent = \`
-    #tree ul{ list-style:none; padding-left:18px; margin:6px 0 }
-    #tree li{ position:relative; margin:2px 0 }
-    #tree li::before{ content:''; position:absolute; left:-8px; top:0.9em; width:6px; height:1px; background:rgba(255,255,255,0.2) }
-    .tree-node{ cursor:pointer; padding:2px 6px; border-radius:8px; }
-    .tree-node:hover{ background:rgba(255,255,255,0.08); }
-    ul.collapsed{ display:none; }
-  \`;
-  document.head.appendChild(style);
-
-  el.addEventListener('click', (e)=>{
-    const node = e.target.closest('.tree-node'); if(!node || node.dataset.leaf) return;
-    const nextUl = node.nextElementSibling; if(!nextUl) return;
-    nextUl.classList.toggle('collapsed');
-  });
-})();
-</script>
-<section class="container" style="margin-top:16px">
-  <h2>Interactive Tree (Embed)</h2>
-<section class="container" style="margin-top:16px">
-  <h2>D3 Tree (SVG)</h2>
-  <p class="small">This interactive SVG tree is generated from <code>people.json</code> using the <code>parents</code> links. Click a node to expand/collapse.</p>
-  <div id="d3-tree-root" class="figure"></div>
-</section>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script>
-(async () => {
-  const people = await fetch('./data/people.json', {cache:'no-store'}).then(r=>r.json());
-  const byId = new Map(people.filter(p=>p.id).map(p=>[p.id,p]));
-  const childrenMap = {};
-  people.forEach(p => (p.parents||[]).forEach(pid => {
-    (childrenMap[pid] ||= []).push(p.id);
-  }));
-  const allIds = new Set(people.filter(p=>p.id).map(p=>p.id));
-  const referencedAsChild = new Set(people.flatMap(p => (p.parents||[])));
-  const roots = [...allIds].filter(id => !referencedAsChild.has(id));
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+  import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  import { getFirestore, onSnapshot, collection, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  
+  // setLogLevel('debug'); // Uncomment for debugging
+  
+  // --- Initialization and Global Setup ---
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+  const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+  const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+  
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  let userId = null;
+  
+  const statusEl = document.getElementById('data-status');
+  
+  // --- Core Tree Utility Functions ---
+  
+  // Helper to construct the node label (e.g., John Smith (1900 - 1980))
+  function label(pData){
+    const birthYear = pData.birth?.date?.slice(-4) || pData.birthYear || '';
+    const deathYear = pData.death?.date?.slice(-4) || '';
 
-  function label(p){
-    const yr = p.birthYear ? ` (${p.birthYear})` : '';
-    return `${p.name||p.id}${yr}`;
+    const lifeYears = [birthYear, deathYear].filter(Boolean).join(' - ');
+    const dates = lifeYears ? ` (${lifeYears})` : '';
+    
+    return `${pData.name||pData.id}${dates}`;
   }
 
-  function buildTree(id, visited=new Set()){
-    if(visited.has(id)) return null; // prevent cycles
+  // Helper function to build the hierarchical data structure for D3/List
+  function buildTree(id, byId, childrenMap, visited=new Set()){
+    if(visited.has(id)) return null; 
     visited.add(id);
     const p = byId.get(id) || {id, name:id};
     const kids = (childrenMap[id]||[])
-      .map(k => buildTree(k, new Set(visited)))
+      .map(k => buildTree(k, byId, childrenMap, new Set(visited)))
       .filter(Boolean);
-    return { id, name: p.name||id, birthYear: p.birthYear||'', data:p, children:kids };
+    
+    // Pass the raw data object 'p' as 'data' for the D3 rendering functions
+    return { id, name: p.name||id, data:p, children:kids };
   }
 
-  const forests = roots.map(r => buildTree(r)).filter(Boolean);
+  // --- 1. List-Based Tree Renderer ---
 
-  const container = d3.select('#d3-tree-root').html(''); // clear
-  const width = Math.min(1000, document.body.clientWidth - 40);
-  const nodeRadius = 6;
+  function nodeHTML(id, byId, childrenMap){
+    const p = byId.get(id) || {id};
+    const kids = (childrenMap[id]||[]).sort((a,b)=> (byId.get(a)?.birth?.date||'').localeCompare(byId.get(b)?.birth?.date||''));
+    const hasKids = kids.length>0;
+    
+    const nodeLabel = label(p);
+    
+    return `<li>
+      <span class="tree-node" data-id="${id}" ${hasKids?'':'data-leaf="1"'}>${nodeLabel}</span>
+      ${hasKids? `<ul class="collapsed">${kids.map(k => nodeHTML(k, byId, childrenMap)).join('')}</ul>` : ''}
+    </li>`;
+  }
+  
+  function renderListTree(people) {
+    const byId = new Map(people.filter(p=>p.id).map(p=>[p.id, p]));
+    const childrenMap = {};
+    people.forEach(p => (p.parents||[]).forEach(parentId => {
+      (childrenMap[parentId] ||= []).push(p.id);
+    }));
 
-  // Render each root as a separate svg stacked vertically
-  forests.forEach((rootData, idx) => {
-    // Convert to hierarchy for d3
-    const root = d3.hierarchy(rootData, d => d.children);
-    // Start collapsed below depth 1
-    root.descendants().forEach(d => { if(d.depth > 1) d._children = d.children, d.children = null; });
+    const allIds = new Set(people.filter(p=>p.id).map(p=>p.id));
+    const referencedAsChild = new Set(people.flatMap(p => (p.parents||[])));
+    const roots = [...allIds].filter(id => !referencedAsChild.has(id));
 
-    const dx = 22; // node height
-    const dy = 140; // level width
-    const tree = d3.tree().nodeSize([dx, dy]);
+    const html = `<ul class="tree-root">${roots.map(r => nodeHTML(r, byId, childrenMap)).join('')}</ul>`;
+    const el = document.getElementById('tree');
+    el.innerHTML = html;
+    
+    // Add toggle functionality (Styles for this are in the first script block)
+    el.addEventListener('click', (e)=>{
+        const node = e.target.closest('.tree-node'); if(!node || node.dataset.leaf) return;
+        const nextUl = node.nextElementSibling; if(!nextUl) return;
+        nextUl.classList.toggle('collapsed');
+    });
+  }
 
-    const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x);
 
-    const svg = container.append('svg')
-      .attr('width', width)
-      .attr('viewBox', [ -20, -20, width, 200 ].join(' '))
-      .style('display','block')
-      .style('margin','12px 0')
-      .style('background','none');
+  // --- 2. D3 Tree (SVG) Renderer ---
+  
+  function renderD3Tree(people){
+    const byId = new Map(people.filter(p=>p.id).map(p=>[p.id,p]));
+    const childrenMap = {};
+    people.forEach(p => (p.parents||[]).forEach(pid => {
+      (childrenMap[pid] ||= []).push(p.id);
+    }));
+    const allIds = new Set(people.filter(p=>p.id).map(p=>p.id));
+    const referencedAsChild = new Set(people.flatMap(p => (p.parents||[])));
+    const roots = [...allIds].filter(id => !referencedAsChild.has(id));
+    
+    const forests = roots.map(r => buildTree(r, byId, childrenMap)).filter(Boolean);
 
-    const g = svg.append('g');
+    const container = d3.select('#d3-tree-root').html(''); 
+    const width = Math.min(1000, document.body.clientWidth - 40);
+    const nodeRadius = 6;
 
-    function update(source){
-      tree(root);
-      let left = Infinity, right = -Infinity;
-      root.each(d => { if(d.x < left) left = d.x; if(d.x > right) right = d.x; });
-      const height = right - left + 40;
-      svg.attr('viewBox', [ -20, left - 20, Math.max(width, root.height*dy + 120), height ].join(' '));
+    forests.forEach((rootData) => {
+      const root = d3.hierarchy(rootData, d => d.children);
+      root.descendants().forEach(d => { if(d.depth > 1) d._children = d.children, d.children = null; });
 
-      const nodes = root.descendants();
-      const links = root.links();
+      const dx = 22; 
+      const dy = 140; 
+      const tree = d3.tree().nodeSize([dx, dy]);
+      const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x);
 
-      // Links
-      const link = g.selectAll('path.link')
-        .data(links, d => d.target.data.id);
+      const svg = container.append('svg')
+        .attr('width', width)
+        .attr('viewBox', [ -20, -20, width, 200 ].join(' '))
+        .style('display','block')
+        .style('margin','12px 0')
+        .style('background','none');
 
-      link.enter().append('path')
-        .attr('class','link')
-        .attr('fill','none')
-        .attr('stroke','rgba(255,255,255,0.25)')
-        .attr('stroke-width',1.2)
-        .attr('d', d => diagonal({ source: {x: source.x0 || 0, y: source.y0 || 0}, target: {x: source.x0 || 0, y: source.y0 || 0} }))
-        .merge(link)
-        .transition().duration(350)
-        .attr('d', diagonal);
+      const g = svg.append('g');
 
-      link.exit().transition().duration(200).attr('opacity',0).remove();
+      function update(source){
+        tree(root);
+        let left = Infinity, right = -Infinity;
+        root.each(d => { if(d.x < left) left = d.x; if(d.x > right) right = d.x; });
+        const height = right - left + 40;
+        svg.attr('viewBox', [ -20, left - 20, Math.max(width, root.height*dy + 120), height ].join(' '));
 
-      // Nodes
-      const node = g.selectAll('g.node')
-        .data(nodes, d => d.data.id);
+        const nodes = root.descendants();
+        const links = root.links();
 
-      const nodeEnter = node.enter().append('g')
-        .attr('class','node')
-        .attr('transform', d => `translate(${source.y0||0},${source.x0||0})`)
-        .attr('cursor', d => (d.children || d._children) ? 'pointer' : 'default')
-        .on('click', (event,d)=>{
-          if(d.children){ d._children = d.children; d.children = null; }
-          else if(d._children){ d.children = d._children; d._children = null; }
-          update(d);
-        });
+        // Links
+        const link = g.selectAll('path.link')
+          .data(links, d => d.target.data.id);
 
-      nodeEnter.append('circle')
-        .attr('r', 0)
-        .attr('fill', d => d._children ? 'rgba(139,211,255,0.8)' : 'rgba(255,255,255,0.5)')
-        .attr('stroke', 'rgba(255,255,255,0.6)')
-        .attr('stroke-width', 1.2)
-        .transition().duration(350)
-        .attr('r', nodeRadius);
+        link.enter().append('path')
+          .attr('class','link')
+          .attr('fill','none')
+          .attr('stroke','rgba(255,255,255,0.25)')
+          .attr('stroke-width',1.2)
+          .attr('d', d => diagonal({ source: {x: source.x0 || 0, y: source.y0 || 0}, target: {x: source.x0 || 0, y: source.y0 || 0} }))
+          .merge(link)
+          .transition().duration(350)
+          .attr('d', diagonal);
 
-      nodeEnter.append('text')
-        .attr('dy', '0.32em')
-        .attr('x', d => d._children ? -10 : 10)
-        .attr('text-anchor', d => d._children ? 'end' : 'start')
-        .attr('font-size', 12)
-        .attr('fill', '#e6eef7')
-        .text(d => `${d.data.name}${d.data.birthYear ? ' ('+d.data.birthYear+')' : ''}`)
-        .clone(true).lower()
-        .attr('stroke', 'rgba(11,15,20,0.85)')
-        .attr('stroke-width', 4);
+        link.exit().transition().duration(200).attr('opacity',0).remove();
 
-      const nodeUpdate = nodeEnter.merge(node);
-      nodeUpdate.transition().duration(350)
-        .attr('transform', d => `translate(${d.y},${d.x})`);
+        // Nodes
+        const node = g.selectAll('g.node')
+          .data(nodes, d => d.data.id);
 
-      const nodeExit = node.exit().transition().duration(200)
-        .attr('transform', d => `translate(${source.y},${source.x})`)
-        .attr('opacity', 0)
-        .remove();
+        const nodeEnter = node.enter().append('g')
+          .attr('class','node')
+          .attr('transform', d => `translate(${source.y0||0},${source.x0||0})`)
+          .attr('cursor', d => (d.children || d._children) ? 'pointer' : 'default')
+          .on('click', (event,d)=>{
+            if(d.children){ d._children = d.children; d.children = null; }
+            else if(d._children){ d.children = d._children; d._children = null; }
+            update(d);
+          });
 
-      // stash positions for animation
-      root.each(d => { d.x0 = d.x; d.y0 = d.y; });
-    }
+        nodeEnter.append('circle')
+          .attr('r', 0)
+          .attr('fill', d => d._children ? 'rgba(139,211,255,0.8)' : 'rgba(255,255,255,0.5)')
+          .attr('stroke', 'rgba(255,255,255,0.6)')
+          .attr('stroke-width', 1.2)
+          .transition().duration(350)
+          .attr('r', nodeRadius);
 
-    // initial positions
-    root.x0 = 0; root.y0 = 0;
-    update(root);
+        nodeEnter.append('text')
+          .attr('dy', '0.32em')
+          .attr('x', d => d._children ? -10 : 10)
+          .attr('text-anchor', d => d._children ? 'end' : 'start')
+          .attr('font-size', 12)
+          .attr('fill', '#e6eef7')
+          .text(d => label(d.data)) // Use the data object for labeling
+          .clone(true).lower()
+          .attr('stroke', 'rgba(11,15,20,0.85)')
+          .attr('stroke-width', 4);
+
+        const nodeUpdate = nodeEnter.merge(node);
+        nodeUpdate.transition().duration(350)
+          .attr('transform', d => `translate(${d.y},${d.x})`);
+
+        const nodeExit = node.exit().transition().duration(200)
+          .attr('transform', d => `translate(${source.y},${source.x})`)
+          .attr('opacity', 0)
+          .remove();
+
+        root.each(d => { d.x0 = d.x; d.y0 = d.y; });
+      }
+
+      root.x0 = 0; root.y0 = 0;
+      update(root);
+    });
+  }
+  
+  // --- Firebase Loading and Authentication ---
+  
+  function getPeopleCollectionRef(currentUserId) {
+    if (!currentUserId) throw new Error("User ID is required for path.");
+    const path = `/artifacts/${appId}/users/${currentUserId}/people`;
+    return collection(db, path);
+  }
+
+  function subscribeToPeople(currentUserId) {
+    const peopleCollectionRef = getPeopleCollectionRef(currentUserId);
+    
+    onSnapshot(peopleCollectionRef, (snapshot) => {
+        const people = snapshot.docs.map(doc => doc.data());
+        
+        renderListTree(people);
+        renderD3Tree(people);
+
+        statusEl.textContent = `Tree data loaded for ${people.length} people from Firestore.`;
+
+    }, (error) => {
+        console.error("Error fetching people data:", error);
+        statusEl.textContent = `Error loading data: ${error.message}`;
+    });
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+      if (user) {
+          userId = user.uid;
+          subscribeToPeople(userId);
+      } else {
+          // Attempt to sign in anonymously to get a user ID to read the associated data
+          if (initialAuthToken) {
+              await signInWithCustomToken(auth, initialAuthToken);
+          } else {
+              await signInAnonymously(auth);
+          }
+      }
   });
-})();
+
 </script>
-
-  <div id="tree-embed-wrap" class="figure"></div>
-</section>
-<script>
-(async()=>{
-  try{
-    const html = await fetch("./data/tree-embed.html", {cache:"no-store"}).then(r=>r.text());
-    document.getElementById("tree-embed-wrap").innerHTML = html;
-  }catch(e){
-    document.getElementById("tree-embed-wrap").textContent = "Could not load data/tree-embed.html";
-  }
-})();
-</script>
-
-
 
   <footer>
     © <span id="y"></span> Plummer Family — Built with care. | <span class="small">Admin: open <code>/admin.html?key=YOURSECRET</code></span>
   </footer>
   <script src="./assets/script.js"></script>
-<section class="container" style="margin-top:16px">
-  <h2>Interactive Tree (Embed)</h2>
-<section class="container" style="margin-top:16px">
-  <h2>D3 Tree (SVG)</h2>
-  <p class="small">This interactive SVG tree is generated from <code>people.json</code> using the <code>parents</code> links. Click a node to expand/collapse.</p>
-  <div id="d3-tree-root" class="figure"></div>
-</section>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script>
-(async () => {
-  const people = await fetch('./data/people.json', {cache:'no-store'}).then(r=>r.json());
-  const byId = new Map(people.filter(p=>p.id).map(p=>[p.id,p]));
-  const childrenMap = {};
-  people.forEach(p => (p.parents||[]).forEach(pid => {
-    (childrenMap[pid] ||= []).push(p.id);
-  }));
-  const allIds = new Set(people.filter(p=>p.id).map(p=>p.id));
-  const referencedAsChild = new Set(people.flatMap(p => (p.parents||[])));
-  const roots = [...allIds].filter(id => !referencedAsChild.has(id));
-
-  function label(p){
-    const yr = p.birthYear ? ` (${p.birthYear})` : '';
-    return `${p.name||p.id}${yr}`;
-  }
-
-  function buildTree(id, visited=new Set()){
-    if(visited.has(id)) return null; // prevent cycles
-    visited.add(id);
-    const p = byId.get(id) || {id, name:id};
-    const kids = (childrenMap[id]||[])
-      .map(k => buildTree(k, new Set(visited)))
-      .filter(Boolean);
-    return { id, name: p.name||id, birthYear: p.birthYear||'', data:p, children:kids };
-  }
-
-  const forests = roots.map(r => buildTree(r)).filter(Boolean);
-
-  const container = d3.select('#d3-tree-root').html(''); // clear
-  const width = Math.min(1000, document.body.clientWidth - 40);
-  const nodeRadius = 6;
-
-  // Render each root as a separate svg stacked vertically
-  forests.forEach((rootData, idx) => {
-    // Convert to hierarchy for d3
-    const root = d3.hierarchy(rootData, d => d.children);
-    // Start collapsed below depth 1
-    root.descendants().forEach(d => { if(d.depth > 1) d._children = d.children, d.children = null; });
-
-    const dx = 22; // node height
-    const dy = 140; // level width
-    const tree = d3.tree().nodeSize([dx, dy]);
-
-    const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x);
-
-    const svg = container.append('svg')
-      .attr('width', width)
-      .attr('viewBox', [ -20, -20, width, 200 ].join(' '))
-      .style('display','block')
-      .style('margin','12px 0')
-      .style('background','none');
-
-    const g = svg.append('g');
-
-    function update(source){
-      tree(root);
-      let left = Infinity, right = -Infinity;
-      root.each(d => { if(d.x < left) left = d.x; if(d.x > right) right = d.x; });
-      const height = right - left + 40;
-      svg.attr('viewBox', [ -20, left - 20, Math.max(width, root.height*dy + 120), height ].join(' '));
-
-      const nodes = root.descendants();
-      const links = root.links();
-
-      // Links
-      const link = g.selectAll('path.link')
-        .data(links, d => d.target.data.id);
-
-      link.enter().append('path')
-        .attr('class','link')
-        .attr('fill','none')
-        .attr('stroke','rgba(255,255,255,0.25)')
-        .attr('stroke-width',1.2)
-        .attr('d', d => diagonal({ source: {x: source.x0 || 0, y: source.y0 || 0}, target: {x: source.x0 || 0, y: source.y0 || 0} }))
-        .merge(link)
-        .transition().duration(350)
-        .attr('d', diagonal);
-
-      link.exit().transition().duration(200).attr('opacity',0).remove();
-
-      // Nodes
-      const node = g.selectAll('g.node')
-        .data(nodes, d => d.data.id);
-
-      const nodeEnter = node.enter().append('g')
-        .attr('class','node')
-        .attr('transform', d => `translate(${source.y0||0},${source.x0||0})`)
-        .attr('cursor', d => (d.children || d._children) ? 'pointer' : 'default')
-        .on('click', (event,d)=>{
-          if(d.children){ d._children = d.children; d.children = null; }
-          else if(d._children){ d.children = d._children; d._children = null; }
-          update(d);
-        });
-
-      nodeEnter.append('circle')
-        .attr('r', 0)
-        .attr('fill', d => d._children ? 'rgba(139,211,255,0.8)' : 'rgba(255,255,255,0.5)')
-        .attr('stroke', 'rgba(255,255,255,0.6)')
-        .attr('stroke-width', 1.2)
-        .transition().duration(350)
-        .attr('r', nodeRadius);
-
-      nodeEnter.append('text')
-        .attr('dy', '0.32em')
-        .attr('x', d => d._children ? -10 : 10)
-        .attr('text-anchor', d => d._children ? 'end' : 'start')
-        .attr('font-size', 12)
-        .attr('fill', '#e6eef7')
-        .text(d => `${d.data.name}${d.data.birthYear ? ' ('+d.data.birthYear+')' : ''}`)
-        .clone(true).lower()
-        .attr('stroke', 'rgba(11,15,20,0.85)')
-        .attr('stroke-width', 4);
-
-      const nodeUpdate = nodeEnter.merge(node);
-      nodeUpdate.transition().duration(350)
-        .attr('transform', d => `translate(${d.y},${d.x})`);
-
-      const nodeExit = node.exit().transition().duration(200)
-        .attr('transform', d => `translate(${source.y},${source.x})`)
-        .attr('opacity', 0)
-        .remove();
-
-      // stash positions for animation
-      root.each(d => { d.x0 = d.x; d.y0 = d.y; });
-    }
-
-    // initial positions
-    root.x0 = 0; root.y0 = 0;
-    update(root);
-  });
-})();
-</script>
-
-  <div id="tree-embed-wrap" class="figure"></div>
-</section>
-<script>
-(async()=>{
-  try{
-    const html = await fetch("./data/tree-embed.html", {cache:"no-store"}).then(r=>r.text());
-    document.getElementById("tree-embed-wrap").innerHTML = html;
-  }catch(e){
-    document.getElementById("tree-embed-wrap").textContent = "Could not load data/tree-embed.html";
-  }
-})();
-</script>
-
   <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
-<section class="container" style="margin-top:16px">
-  <h2>Interactive Tree (Embed)</h2>
-<section class="container" style="margin-top:16px">
-  <h2>D3 Tree (SVG)</h2>
-  <p class="small">This interactive SVG tree is generated from <code>people.json</code> using the <code>parents</code> links. Click a node to expand/collapse.</p>
-  <div id="d3-tree-root" class="figure"></div>
-</section>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script>
-(async () => {
-  const people = await fetch('./data/people.json', {cache:'no-store'}).then(r=>r.json());
-  const byId = new Map(people.filter(p=>p.id).map(p=>[p.id,p]));
-  const childrenMap = {};
-  people.forEach(p => (p.parents||[]).forEach(pid => {
-    (childrenMap[pid] ||= []).push(p.id);
-  }));
-  const allIds = new Set(people.filter(p=>p.id).map(p=>p.id));
-  const referencedAsChild = new Set(people.flatMap(p => (p.parents||[])));
-  const roots = [...allIds].filter(id => !referencedAsChild.has(id));
-
-  function label(p){
-    const yr = p.birthYear ? ` (${p.birthYear})` : '';
-    return `${p.name||p.id}${yr}`;
-  }
-
-  function buildTree(id, visited=new Set()){
-    if(visited.has(id)) return null; // prevent cycles
-    visited.add(id);
-    const p = byId.get(id) || {id, name:id};
-    const kids = (childrenMap[id]||[])
-      .map(k => buildTree(k, new Set(visited)))
-      .filter(Boolean);
-    return { id, name: p.name||id, birthYear: p.birthYear||'', data:p, children:kids };
-  }
-
-  const forests = roots.map(r => buildTree(r)).filter(Boolean);
-
-  const container = d3.select('#d3-tree-root').html(''); // clear
-  const width = Math.min(1000, document.body.clientWidth - 40);
-  const nodeRadius = 6;
-
-  // Render each root as a separate svg stacked vertically
-  forests.forEach((rootData, idx) => {
-    // Convert to hierarchy for d3
-    const root = d3.hierarchy(rootData, d => d.children);
-    // Start collapsed below depth 1
-    root.descendants().forEach(d => { if(d.depth > 1) d._children = d.children, d.children = null; });
-
-    const dx = 22; // node height
-    const dy = 140; // level width
-    const tree = d3.tree().nodeSize([dx, dy]);
-
-    const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x);
-
-    const svg = container.append('svg')
-      .attr('width', width)
-      .attr('viewBox', [ -20, -20, width, 200 ].join(' '))
-      .style('display','block')
-      .style('margin','12px 0')
-      .style('background','none');
-
-    const g = svg.append('g');
-
-    function update(source){
-      tree(root);
-      let left = Infinity, right = -Infinity;
-      root.each(d => { if(d.x < left) left = d.x; if(d.x > right) right = d.x; });
-      const height = right - left + 40;
-      svg.attr('viewBox', [ -20, left - 20, Math.max(width, root.height*dy + 120), height ].join(' '));
-
-      const nodes = root.descendants();
-      const links = root.links();
-
-      // Links
-      const link = g.selectAll('path.link')
-        .data(links, d => d.target.data.id);
-
-      link.enter().append('path')
-        .attr('class','link')
-        .attr('fill','none')
-        .attr('stroke','rgba(255,255,255,0.25)')
-        .attr('stroke-width',1.2)
-        .attr('d', d => diagonal({ source: {x: source.x0 || 0, y: source.y0 || 0}, target: {x: source.x0 || 0, y: source.y0 || 0} }))
-        .merge(link)
-        .transition().duration(350)
-        .attr('d', diagonal);
-
-      link.exit().transition().duration(200).attr('opacity',0).remove();
-
-      // Nodes
-      const node = g.selectAll('g.node')
-        .data(nodes, d => d.data.id);
-
-      const nodeEnter = node.enter().append('g')
-        .attr('class','node')
-        .attr('transform', d => `translate(${source.y0||0},${source.x0||0})`)
-        .attr('cursor', d => (d.children || d._children) ? 'pointer' : 'default')
-        .on('click', (event,d)=>{
-          if(d.children){ d._children = d.children; d.children = null; }
-          else if(d._children){ d.children = d._children; d._children = null; }
-          update(d);
-        });
-
-      nodeEnter.append('circle')
-        .attr('r', 0)
-        .attr('fill', d => d._children ? 'rgba(139,211,255,0.8)' : 'rgba(255,255,255,0.5)')
-        .attr('stroke', 'rgba(255,255,255,0.6)')
-        .attr('stroke-width', 1.2)
-        .transition().duration(350)
-        .attr('r', nodeRadius);
-
-      nodeEnter.append('text')
-        .attr('dy', '0.32em')
-        .attr('x', d => d._children ? -10 : 10)
-        .attr('text-anchor', d => d._children ? 'end' : 'start')
-        .attr('font-size', 12)
-        .attr('fill', '#e6eef7')
-        .text(d => `${d.data.name}${d.data.birthYear ? ' ('+d.data.birthYear+')' : ''}`)
-        .clone(true).lower()
-        .attr('stroke', 'rgba(11,15,20,0.85)')
-        .attr('stroke-width', 4);
-
-      const nodeUpdate = nodeEnter.merge(node);
-      nodeUpdate.transition().duration(350)
-        .attr('transform', d => `translate(${d.y},${d.x})`);
-
-      const nodeExit = node.exit().transition().duration(200)
-        .attr('transform', d => `translate(${source.y},${source.x})`)
-        .attr('opacity', 0)
-        .remove();
-
-      // stash positions for animation
-      root.each(d => { d.x0 = d.x; d.y0 = d.y; });
-    }
-
-    // initial positions
-    root.x0 = 0; root.y0 = 0;
-    update(root);
-  });
-})();
-</script>
-
-  <div id="tree-embed-wrap" class="figure"></div>
-</section>
-<script>
-(async()=>{
-  try{
-    const html = await fetch("./data/tree-embed.html", {cache:"no-store"}).then(r=>r.text());
-    document.getElementById("tree-embed-wrap").innerHTML = html;
-  }catch(e){
-    document.getElementById("tree-embed-wrap").textContent = "Could not load data/tree-embed.html";
-  }
-})();
-</script>
-
 </body>
 </html>
+```eof
+
+I've provided the entire code for `family-tree.html` again.
+
+Would you like to move on to migrating the **Photos** to Firestore next, or is there another file you'd like to work on?
