@@ -21,8 +21,7 @@
           <li><a href="stories.html" >Stories</a></li>
           <li><a href="photos.html" >Photos</a></li>
           <li><a href="contact.html" >Contact</a></li>
-          <!-- Admin is intentionally not linked in nav -->
-        </ul>
+          </ul>
       </div>
     </nav>
     
@@ -48,7 +47,7 @@
     </article>
     <article class="card">
       <h3>People Directory</h3>
-      <p>A quick index of names with birth years and places, pulled from <code>data/people.json</code>.</p>
+      <p>A quick index of names with birth years and places, pulled live from **Firestore**.</p>
     </article>
     <article class="card">
       <h3>Stories & Recipes</h3>
@@ -64,3 +63,6 @@
   <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
 </body>
 </html>
+```eof
+
+The Canvas has been updated to reflect that your "People Directory" now loads from **Firestore**, aligning the public-facing content with the back-end code changes we've implemented.
