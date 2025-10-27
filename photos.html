@@ -21,33 +21,90 @@
           <li><a href="stories.html" >Stories</a></li>
           <li><a href="photos.html" aria-current="page">Photos</a></li>
           <li><a href="contact.html" >Contact</a></li>
-          <!-- Admin is intentionally not linked in nav -->
-        </ul>
+          </ul>
       </div>
     </nav>
     
   
 <main class="container">
-  <h1>Photos</h1>
-  <p class="small">Update <code>data/photos.json</code> with your image URLs (or store images in <code>/assets/photos</code> and reference them).</p>
-  <div id="gallery" class="gallery"></div>
+  <h1>Family Photo Album</h1>
+  <p class="small" id="data-status">Initializing Firebase...</p>
+  <section id="photos" class="gallery"></section>
 </main>
-<script>
-(async () => {
-  try{
-    const photos = await loadJSON('./data/photos.json');
-    const el = document.getElementById('gallery');
-    if (Array.isArray(photos) && photos.length) {
-      el.innerHTML = photos.map(p => 
-        `<a href="${p.src}" target="_blank" rel="noreferrer"><img src="${p.src}" alt="${p.alt||''}"/></a>`
-      ).join('');
-    } else {
-      el.innerHTML = `<div class="alert">No photos yet — add some in <a href="./admin.html?key=YOURSECRET">Admin → Photos Manager</a> <a class="button" href="./admin.html?key=YOURSECRET#photos-manager">+ Add now</a>, then publish.</div>`;
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  import { getFirestore, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  
+  // --- UTILITY FUNCTIONS (Integrated to ensure module stability) ---
+  
+  function renderPhotos(photos) {
+    const container = document.getElementById('photos');
+    if (photos.length === 0) {
+        container.innerHTML = '<div class="alert">No photos found. Add some in the Admin panel!</div>';
+        return;
     }
-  }catch(e){
-    document.getElementById('gallery').innerHTML = `<div class="alert">No photos yet — add some in <a href="./admin.html?key=YOURSECRET">Admin → Photos Manager</a> <a class="button" href="./admin.html?key=YOURSECRET#photos-manager">+ Add now</a>, then publish.</div>`;
+
+    container.innerHTML = photos.map(p => `
+        <figure class="card photo-card">
+            <img src="${p.src}" alt="${p.alt || 'Family Photo'}" loading="lazy" style="width:100%; height:auto; border-radius: 8px;" />
+            <figcaption class="small" style="margin-top: 8px;">${p.alt || 'No Caption'}</figcaption>
+        </figure>
+    `).join('');
   }
-})();
+
+  // --- FIREBASE AND INITIALIZATION ---
+  
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+  const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+  const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+  
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  
+  const statusEl = document.getElementById('data-status');
+  
+  let userId = null;
+
+  function getPhotosCollectionRef(currentUserId) {
+    if (!currentUserId) throw new Error("User ID is required for path.");
+    // This is the collection where your photos data is saved by the admin
+    const path = `/artifacts/${appId}/users/${currentUserId}/photos`;
+    return collection(db, path);
+  }
+
+  function subscribeToPhotos(currentUserId) {
+    const photosCollectionRef = getPhotosCollectionRef(currentUserId);
+    
+    // onSnapshot provides real-time updates
+    onSnapshot(photosCollectionRef, (snapshot) => {
+        // Map the docs to include Firestore ID, useful for deletions
+        const photosList = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        renderPhotos(photosList);
+        statusEl.textContent = `Data: Loaded ${photosList.length} photos from Firestore.`;
+
+    }, (error) => {
+        console.error("Error fetching photos data:", error);
+        statusEl.textContent = `Error loading photos: ${error.message}`;
+    });
+  }
+
+  // --- AUTHENTICATION AND STARTUP ---
+  onAuthStateChanged(auth, async (user) => {
+      if (user) {
+          userId = user.uid;
+          subscribeToPhotos(userId);
+      } else {
+          // Attempt to sign in to get a user ID to read the associated data
+          if (initialAuthToken) {
+              await signInWithCustomToken(auth, initialAuthToken);
+          } else {
+              await signInAnonymously(auth);
+          }
+      }
+  });
+
 </script>
 
   <footer>
@@ -57,3 +114,14 @@
   <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
 </body>
 </html>
+```eof
+
+---
+
+## 2. ⚙️ Admin Page: `admin.html` (Photos Manager)
+
+I am updating the "Photos Manager" to load, save, and delete data directly from the Firestore collection. **The GitHub upload feature is kept** as it's required for hosting the actual image files.
+
+```html:Admin Page:admin.html
+<!doctype html>
+<html lang="en">
