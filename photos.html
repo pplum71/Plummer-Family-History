@@ -21,7 +21,8 @@
           <li><a href="stories.html" >Stories</a></li>
           <li><a href="photos.html" aria-current="page">Photos</a></li>
           <li><a href="contact.html" >Contact</a></li>
-          </ul>
+          <!-- Admin is intentionally not linked in nav -->
+        </ul>
       </div>
     </nav>
     
@@ -33,7 +34,8 @@
 </main>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  // FIX: Added signInWithCustomToken to the import list
+  import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
   import { getFirestore, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
   
   // --- UTILITY FUNCTIONS (Integrated to ensure module stability) ---
@@ -114,14 +116,3 @@
   <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
 </body>
 </html>
-```eof
-
----
-
-## 2. ⚙️ Admin Page: `admin.html` (Photos Manager)
-
-I am updating the "Photos Manager" to load, save, and delete data directly from the Firestore collection. **The GitHub upload feature is kept** as it's required for hosting the actual image files.
-
-```html:Admin Page:admin.html
-<!doctype html>
-<html lang="en">
