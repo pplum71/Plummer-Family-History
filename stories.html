@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stories · Plummer Family History</title>
+  <meta name="description" content="A multipage family history site for preserving stories, photos, and the family tree." />
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+  
+    <nav class="nav">
+      <div class="nav-inner nav">
+        <div class="brand">
+          <img src="./assets/logo.png" alt="Plummer Crest" style="height:28px;width:auto" />
+          <span>Plummer Family History</span>
+        </div>
+        <ul class="nav">
+          <li><a href="index.html" >Home</a></li>
+          <li><a href="family-tree.html" >Family Tree</a></li>
+          <li><a href="stories.html" aria-current="page">Stories</a></li>
+          <li><a href="photos.html" >Photos</a></li>
+          <li><a href="contact.html" >Contact</a></li>
+          <!-- Admin is intentionally not linked in nav -->
+        </ul>
+      </div>
+    </nav>
+    
+  
+<main class="container">
+  <h1>Stories</h1>
+  <section id="stories" class="grid"></section>
+</main>
+<script>
+(async () => {
+  try{
+    const stories = await loadJSON('./data/stories.json');
+    const wrap = (s) => `<article class="card"><div class="badge">${s.year||''}</div><h3>${s.title}</h3><p>${s.summary||''}</p></article>`;
+    const el = document.getElementById('stories');
+    if (Array.isArray(stories) && stories.length) {
+      el.innerHTML = stories.map(wrap).join('');
+    } else {
+      el.innerHTML = `<div class="alert">No family stories have been added yet — check back soon, or add some in <a href="./admin.html?key=YOURSECRET">Admin → Stories Manager</a> <a class="button" href="./admin.html?key=YOURSECRET#stories-manager">+ Add now</a>.</div>`;
+    }
+  }catch(e){
+    document.getElementById('stories').innerHTML = `<div class="alert">No family stories have been added yet — check back soon, or add some in <a href="./admin.html?key=YOURSECRET">Admin → Stories Manager</a> <a class="button" href="./admin.html?key=YOURSECRET#stories-manager">+ Add now</a>.</div>`;
+  }
+})();
+</script>
+
+  <footer>
+    © <span id="y"></span> Plummer Family — Built with care. | <span class="small">Admin: open <code>/admin.html?key=YOURSECRET</code></span>
+  </footer>
+  <script src="./assets/script.js"></script>
+  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+</body>
+</html>

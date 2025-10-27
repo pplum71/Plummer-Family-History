@@ -1,0 +1,52 @@
+
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>README · Plummer Family History Site</title>
+<link rel="stylesheet" href="./assets/style.css"/>
+</head><body class="container">
+<h1>Plummer Family History — Quick Start</h1>
+<ol>
+  <li><strong>Edit data</strong> in <code>/data/*.json</code>.</li>
+  <li><strong>Replace</strong> the crest at <code>/assets/logo.svg</code> with your own.</li>
+  <li><strong>Formspree</strong>: create a form and swap in your ID in <code>contact.html</code>.</li>
+</ol>
+<h2>Deploy to GitHub Pages</h2>
+<pre><code>1. Create a repo named e.g. plummer-family-history
+2. Upload all files from this zip (keep the folders)
+3. In repo settings → Pages → Deploy from branch → main / root
+4. Wait 1–2 minutes, then open your site URL
+</code></pre>
+<h2>Deploy to Netlify</h2>
+<pre><code>1. Drag & drop this folder into Netlify
+2. Or connect your Git repo; build command: (leave blank), publish dir: root
+</code></pre>
+<h2>Hide People from public nav</h2>
+<p>Open any page and remove the People link in the nav. Editors can still access <code>/people.html</code> directly or via Admin page.</p>
+<h2>Privacy Notes</h2>
+<ul>
+  <li>Exclude birthdates/locations for living relatives unless you have permission.</li>
+  <li>Use first names or initials if needed.</li>
+</ul>
+</body></html>
+
+<hr/>
+<h2>Admin Editors</h2>
+<ul>
+  <li><strong>People Manager</strong>: add/edit relatives, export <code>people.json</code>.</li>
+  <li><strong>Stories Manager</strong>: write stories/recipes, export <code>stories.json</code>.</li>
+  <li><strong>Photos Manager</strong>: enter photo URLs + captions, export <code>photos.json</code>.</li>
+</ul>
+<p>Open <code>/admin.html?key=YOURSECRET</code> (change YOURSECRET in the file). Drafts auto‑save in your browser.</p>
+
+<hr/>
+<h2>Direct GitHub Commits from Admin</h2>
+<ol>
+  <li>Create a <strong>fine-grained Personal Access Token</strong> limited to this repo with <code>contents:write</code>; set an expiration.</li>
+  <li>Open <code>/admin.html?key=YOURSECRET</code> → fill in Owner, Repo, Branch, Images Path, and Token → Save.</li>
+  <li><strong>Photos Manager</strong>: Choose Images → Upload to GitHub & Add (adds to <em>assets/photos</em> and inserts raw URLs).</li>
+  <li>Click <em>Commit photos.json to GitHub</em> (and similarly for people/stories) to publish JSON updates.</li>
+</ol>
+<p class="small">Your token is stored <em>only</em> in your browser (localStorage). For production, consider using Netlify Functions with server-side tokens for better security.</p>
+
+<h2>D3 Tree (SVG)</h2>
+<p>The Family Tree page includes a collapsible D3 SVG tree built from <code>people.json</code> (using <code>parents</code> arrays). You can customize the layout in <code>family-tree.html</code> near the "D3 Tree (SVG)" section.</p>

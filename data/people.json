@@ -1,0 +1,29 @@
+[
+  {
+    "name": "John Gordon Plummer",
+    "birthYear": "1890",
+    "location": "Manchester, Jamaica",
+    "summary": "Patriarch\u2014story keeper and farmer.",
+    "id": "john-gordon-plummer-1890",
+    "parents": [],
+    "spouses": []
+  },
+  {
+    "name": "Jane Margaret Manning",
+    "birthYear": "1893",
+    "location": "Plowden, Jamaica",
+    "summary": "Known for hospitality and strength.",
+    "id": "jane-margaret-manning-1893",
+    "parents": [],
+    "spouses": []
+  },
+  {
+    "name": "Family Member Placeholder",
+    "birthYear": "1920",
+    "location": "\u2014",
+    "summary": "Add your relatives here.",
+    "id": "family-member-placeholder-1920",
+    "parents": [],
+    "spouses": []
+  }
+]

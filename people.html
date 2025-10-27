@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>People · Plummer Family History</title>
+  <meta name="description" content="A multipage family history site for preserving stories, photos, and the family tree." />
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+  
+    <nav class="nav">
+      <div class="nav-inner nav">
+        <div class="brand">
+          <img src="./assets/logo.png" alt="Plummer Crest" style="height:28px;width:auto" />
+          <span>Plummer Family History</span>
+        </div>
+        <ul class="nav">
+          <li><a href="index.html" >Home</a></li>
+          <li><a href="family-tree.html" >Family Tree</a></li>
+          <li><a href="stories.html" >Stories</a></li>
+          <li><a href="photos.html" >Photos</a></li>
+          <li><a href="contact.html" >Contact</a></li>
+          <!-- Admin is intentionally not linked in nav -->
+        </ul>
+      </div>
+    </nav>
+    
+  
+<main class="container">
+  <h1>People</h1>
+  <div class="searchbar">
+    <input id="q" class="input" placeholder="Search by name, place, or note…" />
+    <span class="small">Data: <code>data/people.json</code></span>
+  </div>
+  <section id="people" class="grid"></section>
+</main>
+<script>
+(async () => {
+  try{
+    const list = await loadJSON('./data/people.json');
+    const container = document.getElementById('people');
+    const render = (items) => container.innerHTML = items.map(cardPerson).join('');
+    const input = document.getElementById('q');
+    input.addEventListener('input', () => render(filterPeople(list, input.value)));
+    render(list);
+  }catch(e){
+    document.getElementById('people').innerHTML = '<div class="alert">Could not load people.json. Make sure the site is served over HTTP (GitHub Pages/Netlify) and the file exists.</div>';
+  }
+})();
+</script>
+
+  <footer>
+    © <span id="y"></span> Plummer Family — Built with care. | <span class="small">Admin: open <code>/admin.html?key=YOURSECRET</code></span>
+  </footer>
+  <script src="./assets/script.js"></script>
+  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+</body>
+</html>

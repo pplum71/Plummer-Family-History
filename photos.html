@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Photos · Plummer Family History</title>
+  <meta name="description" content="A multipage family history site for preserving stories, photos, and the family tree." />
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+  
+    <nav class="nav">
+      <div class="nav-inner nav">
+        <div class="brand">
+          <img src="./assets/logo.png" alt="Plummer Crest" style="height:28px;width:auto" />
+          <span>Plummer Family History</span>
+        </div>
+        <ul class="nav">
+          <li><a href="index.html" >Home</a></li>
+          <li><a href="family-tree.html" >Family Tree</a></li>
+          <li><a href="stories.html" >Stories</a></li>
+          <li><a href="photos.html" aria-current="page">Photos</a></li>
+          <li><a href="contact.html" >Contact</a></li>
+          <!-- Admin is intentionally not linked in nav -->
+        </ul>
+      </div>
+    </nav>
+    
+  
+<main class="container">
+  <h1>Photos</h1>
+  <p class="small">Update <code>data/photos.json</code> with your image URLs (or store images in <code>/assets/photos</code> and reference them).</p>
+  <div id="gallery" class="gallery"></div>
+</main>
+<script>
+(async () => {
+  try{
+    const photos = await loadJSON('./data/photos.json');
+    const el = document.getElementById('gallery');
+    if (Array.isArray(photos) && photos.length) {
+      el.innerHTML = photos.map(p => 
+        `<a href="${p.src}" target="_blank" rel="noreferrer"><img src="${p.src}" alt="${p.alt||''}"/></a>`
+      ).join('');
+    } else {
+      el.innerHTML = `<div class="alert">No photos yet — add some in <a href="./admin.html?key=YOURSECRET">Admin → Photos Manager</a> <a class="button" href="./admin.html?key=YOURSECRET#photos-manager">+ Add now</a>, then publish.</div>`;
+    }
+  }catch(e){
+    document.getElementById('gallery').innerHTML = `<div class="alert">No photos yet — add some in <a href="./admin.html?key=YOURSECRET">Admin → Photos Manager</a> <a class="button" href="./admin.html?key=YOURSECRET#photos-manager">+ Add now</a>, then publish.</div>`;
+  }
+})();
+</script>
+
+  <footer>
+    © <span id="y"></span> Plummer Family — Built with care. | <span class="small">Admin: open <code>/admin.html?key=YOURSECRET</code></span>
+  </footer>
+  <script src="./assets/script.js"></script>
+  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+</body>
+</html>

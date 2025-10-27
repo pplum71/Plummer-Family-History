@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact · Plummer Family History</title>
+  <meta name="description" content="A multipage family history site for preserving stories, photos, and the family tree." />
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+  
+    <nav class="nav">
+      <div class="nav-inner nav">
+        <div class="brand">
+          <img src="./assets/logo.png" alt="Plummer Crest" style="height:28px;width:auto" />
+          <span>Plummer Family History</span>
+        </div>
+        <ul class="nav">
+          <li><a href="index.html" >Home</a></li>
+          <li><a href="family-tree.html" >Family Tree</a></li>
+          <li><a href="stories.html" >Stories</a></li>
+          <li><a href="photos.html" >Photos</a></li>
+          <li><a href="contact.html" aria-current="page">Contact</a></li>
+          <!-- Admin is intentionally not linked in nav -->
+        </ul>
+      </div>
+    </nav>
+    
+  
+<main class="container">
+  <h1>Share a Memory</h1>
+  <p class="small">This uses Formspree. Replace <code>YOUR_FORMSPREE_ID</code> below once you create a form.</p>
+  <form class="" action="https://formspree.io/f/YOUR_FORMSPREE_ID" method="POST">
+    <label class="label">Your Name</label>
+    <input class="input" name="name" required/>
+
+    <div class="row">
+      <div>
+        <label class="label">Email</label>
+        <input class="input" type="email" name="email" required/>
+      </div>
+      <div>
+        <label class="label">Relation to Family</label>
+        <input class="input" name="relation" placeholder="e.g., cousin, friend, researcher"/>
+      </div>
+    </div>
+
+    <label class="label">Message / Memory</label>
+    <textarea class="input" name="message" rows="6" required></textarea>
+
+    <label class="label">Photo Link (optional)</label>
+    <input class="input" name="photo_url" placeholder="https://…"/>
+
+    <p class="small">By submitting, you confirm you have permission to share this content.</p>
+    <button class="button" type="submit">Send</button>
+  </form>
+</main>
+
+  <footer>
+    © <span id="y"></span> Plummer Family — Built with care. | <span class="small">Admin: open <code>/admin.html?key=YOURSECRET</code></span>
+  </footer>
+  <script src="./assets/script.js"></script>
+  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+</body>
+</html>
